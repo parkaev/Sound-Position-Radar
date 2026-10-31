@@ -512,10 +512,10 @@
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                 <TextBlock Text="Размер от края, px:" Width="112" VerticalAlignment="Center" FontSize="12"
-                                           ToolTip="Насколько глубоко свечение заходит от края экрана (пресет «Кромка»); для «Дуг» — близость дуг к краю" />
+                                           ToolTip="Насколько глубоко свечение заходит от края экрана (пресет «Свечение краёв»); для «Дуг» — близость дуг к краю" />
                                 <Slider x:Name="slSize" Minimum="60" Maximum="220" Value="130" Width="120"
                                         IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnOverlaySliderChanged"
-                                        ToolTip="Насколько глубоко свечение заходит от края экрана (пресет «Кромка»); для «Дуг» — близость дуг к краю" />
+                                        ToolTip="Насколько глубоко свечение заходит от края экрана (пресет «Свечение краёв»); для «Дуг» — близость дуг к краю" />
                                 <TextBox x:Name="tbSizeValue" Width="52" Margin="6,0,0,0" TextChanged="OnOverlayTextChanged"
                                          PreviewTextInput="NumericOnly" MaxLength="3" />
                             </StackPanel>

@@ -220,6 +220,15 @@ public partial class MainWindow : Window
         slSize.Value = Config.OverlaySizeDepth;
         slHalfWidth.Value = Config.OverlayHalfWidth;
         slFade.Value = Config.OverlayFadeSec;
+        // Если конфиг совпал с дефолтами XAML, ValueChanged не сработает — заполняем поля явно.
+        SetIntText(tbThresholdValue, (int)slThreshold.Value);
+        SetIntText(tbSalienceValue, (int)slMinSalience.Value);
+        tbThreshold.Text = $"Порог над фоном: {slThreshold.Value:F1} дБ";
+        tbMinSalience.Text = $"Мин. громкость события: {slMinSalience.Value:F1} дБ";
+        SetIntText(tbOpacityValue, (int)slOpacity.Value);
+        SetIntText(tbSizeValue, (int)slSize.Value);
+        SetIntText(tbHalfWidthValue, (int)slHalfWidth.Value);
+        SetIntText(tbFadeValue, (int)slFade.Value);
         cbShowLog.IsChecked = Config.ShowEventLog;
         ApplyLogVisibility();
         RebuildHiddenZonesPanel();
@@ -257,7 +266,7 @@ public partial class MainWindow : Window
         foreach (var item in cbOverlayPreset.Items.Cast<ComboBoxItem>())
             if (string.Equals(item.Content?.ToString(), Config.OverlayPreset, StringComparison.Ordinal))
                 item.IsSelected = true;
-        tbHotkey.Text = string.IsNullOrEmpty(Config.OverlayHotkey) ? "(не задано)" : Config.OverlayHotkey;
+        tbHotkey.Text = string.IsNullOrEmpty(Config.OverlayHotkey) ? "наж. для установки" : Config.OverlayHotkey;
         foreach (var item in cbProfile.Items.Cast<ComboBoxItem>())
             if (string.Equals(item.Content?.ToString(), Config.GameProfile, StringComparison.OrdinalIgnoreCase))
                 item.IsSelected = true;
@@ -541,7 +550,12 @@ public partial class MainWindow : Window
             return;
         if (key == Key.Escape)
         {
-            SetHotkey("");
+            // Отмена захвата: прежний хоткей остаётся активным.
+            tbHotkey.Text = string.IsNullOrEmpty(Config.OverlayHotkey) ? "наж. для установки" : Config.OverlayHotkey;
+            Keyboard.ClearFocus();
+            hintHotkey.Text = "Отменено. Прежний хоткей не изменён.";
+            hintHotkey.Foreground = (Brush)TryFindResource("Brush.Muted") ?? Brushes.Gray;
+            hintHotkey.Visibility = Visibility.Visible;
             return;
         }
         var parts = new List<string>();
@@ -966,16 +980,6 @@ public partial class MainWindow : Window
             tickElements.Add(line);
         }
 
-        foreach (var (a, text, dx) in new[] { (-90, "−90° Л", -30), (90, "П +90°", -8), (180, "180°", -14) })
-        {
-            var p = PointOnCircle(center, radius - 46, a);
-            var label = new TextBlock { Text = text, Foreground = dim, FontSize = 11 };
-            Canvas.SetLeft(label, p.X + dx);
-            Canvas.SetTop(label, p.Y - 8);
-            radar.Children.Add(label);
-            tickElements.Add(label);
-        }
-
         for (var k = 0; k < zoneCount; k++)
         {
             var centerDeg = NormalizeAngle(k * zoneStep);
@@ -983,7 +987,8 @@ public partial class MainWindow : Window
             var isHidden = hidden.Contains(k);
             var label = new TextBlock
             {
-                Text = $"{centerDeg:+0;-0;0}°",
+                // У нижней точки без знака: +180° и −180° — одна и та же сторона.
+                Text = Math.Abs(Math.Abs(centerDeg) - 180) < 0.5 ? "180°" : $"{centerDeg:+0;-0;0}°",
                 Foreground = isHidden
                     ? new SolidColorBrush(Color.FromRgb(0xE5, 0x73, 0x73))
                     : new SolidColorBrush(Color.FromRgb(0x9A, 0x9A, 0xA0)),
@@ -1014,6 +1019,13 @@ public partial class MainWindow : Window
         Canvas.SetTop(frontLabel, center.Y - radius - 16);
         radar.Children.Add(frontLabel);
         tickElements.Add(frontLabel);
+
+        // Зеркальная метка снизу, симметрично «ПЕРЕД».
+        var rearDirection = new TextBlock { Text = "ЗАД", Foreground = dim, FontSize = 11 };
+        Canvas.SetLeft(rearDirection, center.X - 13);
+        Canvas.SetTop(rearDirection, center.Y + radius + 6);
+        radar.Children.Add(rearDirection);
+        tickElements.Add(rearDirection);
 
         wedge = new Polygon { Points = WedgePoints(center, radius, 0, 10), Fill = Brushes.LimeGreen, Opacity = 0 };
         radar.Children.Add(wedge);
