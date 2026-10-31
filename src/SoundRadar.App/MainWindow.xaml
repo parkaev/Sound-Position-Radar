@@ -1,0 +1,515 @@
+<Window x:Class="SoundRadar.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sound Position Radar"
+        Height="700" Width="1280" MinWidth="940" MinHeight="620"
+        Background="#1B1B1F" Foreground="#DDDDDD"
+        FontFamily="Segoe UI" FontSize="13"
+        Closing="OnWindowClosing">
+    <Window.Resources>
+        <!-- Тёмная flat-тема: дефолтные шаблоны WPF красят контролы системными кистями
+             светлой темы — переопределяем системные кисти и даём плоские шаблоны контролов. -->
+        <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#252528" />
+        <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#2D2D31" />
+        <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#DDDDDD" />
+        <SolidColorBrush x:Key="{x:Static SystemColors.ControlDarkBrushKey}" Color="#55555A" />
+        <SolidColorBrush x:Key="{x:Static SystemColors.GrayTextBrushKey}" Color="#9A9AA0" />
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#2F523C" />
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#3A4A52" />
+
+        <!-- Кнопка: плоская, тонкая рамка, лёгкая подсветка при наведении -->
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#2D2D31" />
+            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="BorderBrush" Value="#3F3F46" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                                CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#6A6A72" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- ComboBox: дефолтный шаблон светлый и не перекрашивается системными кистями —
+             свой тёмный шаблон (закрытая часть + дропдаун + пункты). -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="Background" Value="#2D2D31" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="MaxDropDownHeight" Value="320" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton" Focusable="False" ClickMode="Press"
+                                          Background="{TemplateBinding Background}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="border"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="#55555A" BorderThickness="1" CornerRadius="4">
+                                            <Path Data="M 0 0 L 4 4 L 8 0 Z" Fill="#9A9AA0"
+                                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                  Margin="0,0,10,0" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="border" Property="Background" Value="#38383E" />
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="border" Property="Background" Value="#38383E" />
+                                                <Setter TargetName="border" Property="BorderBrush" Value="#6A6A70" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="Center"
+                                              IsHitTestVisible="False" />
+                            <Popup AllowsTransparency="True"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom" PopupAnimation="Fade">
+                                <Border Background="#252528" BorderBrush="#3F3F46" BorderThickness="1"
+                                        CornerRadius="6" Margin="0,2,0,0"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="bd" Background="Transparent" Padding="{TemplateBinding Padding}"
+                                CornerRadius="4" Margin="2,0">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#2F523C" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#2F523C" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ListBox">
+            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="Background" Value="#141418" />
+            <Setter Property="BorderBrush" Value="#2E2E33" />
+        </Style>
+        <!-- CheckBox: плоский квадрат с галочкой -->
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border x:Name="bullet" Width="16" Height="16" CornerRadius="4" Background="#252528"
+                                    BorderBrush="#55555C" BorderThickness="1" VerticalAlignment="Center">
+                                <Path x:Name="check" Data="M 3.5 8 L 6.5 11 L 12.5 4.5" Stroke="#7BD88F"
+                                      StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ContentPresenter Margin="7,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bullet" Property="Background" Value="#2F523C" />
+                                <Setter TargetName="bullet" Property="BorderBrush" Value="#3D6B4F" />
+                                <Setter TargetName="check" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bullet" Property="BorderBrush" Value="#7A7A82" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- RadioButton: плоский круг с точкой -->
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border x:Name="bullet" Width="16" Height="16" CornerRadius="8" Background="#252528"
+                                    BorderBrush="#55555C" BorderThickness="1" VerticalAlignment="Center">
+                                <Ellipse x:Name="dot" Width="8" Height="8" Fill="#4FC3F7" Visibility="Collapsed"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ContentPresenter Margin="7,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bullet" Property="BorderBrush" Value="#4FC3F7" />
+                                <Setter TargetName="dot" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bullet" Property="BorderBrush" Value="#7A7A82" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- GroupBox: заголовок-метка + плоская карточка. Grid (а не StackPanel!) — строка *
+             отдаёт содержимому ОГРАНИЧЕННУЮ высоту: в StackPanel радар-канвас получал бы
+             бесконечную меру и не отрисовывался. -->
+        <Style TargetType="GroupBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GroupBox">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{TemplateBinding Header}"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       FontSize="13" FontWeight="SemiBold" Margin="2,0,0,6" />
+                            <Border Grid.Row="1" Background="#202024" BorderBrush="#2E2E33" BorderThickness="1"
+                                    CornerRadius="8" Padding="10" TextElement.Foreground="#DDDDDD">
+                                <ContentPresenter />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- TextBox: плоский, акцентная рамка при фокусе -->
+        <Style TargetType="TextBox">
+            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="Background" Value="#252528" />
+            <Setter Property="BorderBrush" Value="#55555C" />
+            <Setter Property="CaretBrush" Value="#DDDDDD" />
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#6A6A72" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#4FC3F7" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- Slider: плоский, тонкая дорожка, круглая ручка -->
+        <Style x:Key="TrackRepeatTransparent" TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Rectangle Fill="Transparent" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="TrackFillLeft" TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Height="4" Background="#4FC3F7" CornerRadius="2" VerticalAlignment="Center" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="TrackFillRight" TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Height="4" Background="#3F3F46" CornerRadius="2" VerticalAlignment="Center" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="Slider">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid VerticalAlignment="Center" MinHeight="18" Background="Transparent">
+                            <Track x:Name="PART_Track" Orientation="Horizontal">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource TrackFillLeft}" Command="Slider.DecreaseLarge" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource TrackFillRight}" Command="Slider.IncreaseLarge" />
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Width="14" Height="14" Focusable="False">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse Fill="#E8E8EA" Stroke="#7A7A80" StrokeThickness="1" />
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ToolTip">
+            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="Background" Value="#2D2D31" />
+            <Setter Property="BorderBrush" Value="#55555A" />
+        </Style>
+    </Window.Resources>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="250" />
+            <ColumnDefinition Width="1.35*" MinWidth="260" />
+            <ColumnDefinition x:Name="colLog" Width="*" MinWidth="250" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Настройки: при малой высоте окна колонка скроллится -->
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,10,0">
+        <StackPanel Margin="0,0,0,0">
+            <GroupBox Header="Источник звука" Foreground="#9CDCFE">
+                <StackPanel Margin="6">
+                    <RadioButton x:Name="rbProcess" Content="Звук конкретного процесса" IsChecked="True" GroupName="src" />
+                    <RadioButton x:Name="rbDevice" Content="Всё выходное устройство" GroupName="src" Margin="0,4,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <ComboBox x:Name="cbProcess" Width="210" ToolTip="Процессы с активным звуком — сверху" />
+                        <Button x:Name="btnRefresh" Content="⟳" Width="32" Margin="6,0,0,0" Click="OnRefreshProcesses"
+                                ToolTip="Обновить список процессов" />
+                    </StackPanel>
+                    <CheckBox x:Name="cbIncludeTree" Content="Включая дочерние процессы (лаунчеры)"
+                              IsChecked="True" Margin="0,10,0,0" />
+                    <CheckBox x:Name="cb360" Content="360°: захват 8 каналов (7.1)" IsChecked="False" Margin="0,8,0,0"
+                              ToolTip="Если игра рендерит surround-микс — увидим зад. Если система не отдаёт 8 каналов, автоматический откат на стерео (тогда только 180°)." />
+                    <TextBlock Text="Совет: в списке сверху процессы, которые сейчас воспроизводят звук."
+                               TextWrapping="Wrap" Foreground="#808080" FontSize="11" Margin="0,8,0,0" />
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Детектор" Foreground="#9CDCFE" Margin="0,10,0,0">
+                <StackPanel Margin="6">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="Профиль игры:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox x:Name="cbProfile" Width="150" SelectionChanged="OnProfileChanged"
+                                  ToolTip="DayZ: узкий пан (замерено по записям), направление по басовым полосам, вч-щелчок пули детектируется охотнее. Универсальный: constant-power.">
+                            <ComboBoxItem>DayZ</ComboBoxItem>
+                            <ComboBoxItem>Универсальный</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    <TextBlock x:Name="tbThreshold" Text="Порог над фоном: 9.0 дБ"
+                               ToolTip="Насколько громче постоянного фона игры должен быть звук, чтобы стать событием. Ниже — больше событий и ложных срабатываний (ветер, птицы); выше — только очень явные звуки. Начните с 8–10: если оверлей мигает без причины — поднимите." />
+                    <Slider x:Name="slThreshold" Minimum="4" Maximum="20" Value="9" TickFrequency="1"
+                            IsSnapToTickEnabled="True" ValueChanged="OnDetectorSliderChanged" />
+                    <TextBlock x:Name="tbMinSalience" Text="Мин. громкость события: 6.0 дБ" Margin="0,8,0,0"
+                               ToolTip="Фильтр показа: события слабее этого уровня не отображаются в оверлее и логе. Меньше — видны тихие и дальние звуки; больше — только близкие и громкие. Это не то же самое, что порог: порог решает «обнаружить ли», этот фильтр решает «показывать ли»." />
+                    <Slider x:Name="slMinSalience" Minimum="3" Maximum="15" Value="6" TickFrequency="1"
+                            IsSnapToTickEnabled="True" ValueChanged="OnDetectorSliderChanged" />
+                    <TextBlock Text="Подсказка: наведите курсор на «Порог…» и «Мин. громкость…» — там объяснение, как настраивать."
+                               TextWrapping="Wrap" Foreground="#808080" FontSize="11" Margin="0,6,0,0" />
+                    <CheckBox x:Name="cbShowLog" Content="Показывать журнал событий (правая колонка)"
+                              IsChecked="True" Checked="OnShowLogChanged" Unchecked="OnShowLogChanged" Margin="0,10,0,0"
+                              ToolTip="Выключите, чтобы убрать колонку «События» — центральная секция расширится." />
+                    <CheckBox x:Name="cbJsonl" Content="Журнал событий JSONL (файл)" Margin="0,4,0,0" />
+                    <CheckBox x:Name="cbWav" Content="Запись сырого WAV (диагностика)" Margin="0,4,0,0" />
+                    <Button x:Name="btnResetDetector" Content="Сбросить настройки детектора" Margin="0,10,0,0"
+                            Click="OnResetDetector" ToolTip="Порог 9 дБ, мин. громкость 6 дБ (профиль игры не сбрасывается)" />
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Оверлей" Foreground="#9CDCFE" Margin="0,10,0,0">
+                <StackPanel Margin="6">
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="Вид:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox x:Name="cbOverlayPreset" Width="160" SelectionChanged="OnOverlayPresetChanged">
+                            <ComboBoxItem>Дуги</ComboBoxItem>
+                            <ComboBoxItem>Кромка (градиент)</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="Хоткей вкл/выкл:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox x:Name="tbHotkey" Width="110" IsReadOnly="True" PreviewKeyDown="OnHotkeyKeyDown"
+                                 Text="(не задано)" ToolTip="Кликните и нажмите сочетание (работает глобально, поверх игры). Esc или ✕ — сбросить." />
+                        <Button x:Name="btnHotkeyReset" Content="✕" Width="28" Margin="6,0,0,0" Click="OnHotkeyReset"
+                                ToolTip="Сбросить хоткей" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="Зон по кругу:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox x:Name="cbZones" Width="76" SelectionChanged="OnZonesChanged">
+                            <ComboBoxItem>8</ComboBoxItem>
+                            <ComboBoxItem>12</ComboBoxItem>
+                            <ComboBoxItem>16</ComboBoxItem>
+                            <ComboBoxItem>24</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="Цвет:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox x:Name="cbColorMode" Width="200" SelectionChanged="OnColorModeChanged"
+                                  ToolTip="По близости: зеленоватый — звук дальше, красный/тёмно-красный — очень близко. По громкости: классическая шкала. Постоянный: один выбранный оттенок.">
+                            <ComboBoxItem>По близости</ComboBoxItem>
+                            <ComboBoxItem>По громкости</ComboBoxItem>
+                            <ComboBoxItem>Постоянный</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="Оттенок:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox x:Name="cbTintColor" Width="110" SelectionChanged="OnTintColorChanged" IsEnabled="False">
+                            <ComboBoxItem>Красный</ComboBoxItem>
+                            <ComboBoxItem>Оранжевый</ComboBoxItem>
+                            <ComboBoxItem>Жёлтый</ComboBoxItem>
+                            <ComboBoxItem>Голубой</ComboBoxItem>
+                            <ComboBoxItem>Белый</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    <TextBlock Text="Тонкая настройка (шаг 1, можно вписать вручную)" Foreground="#9CDCFE" Margin="0,10,0,2" />
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <TextBlock Text="Непрозрачность, %:" Width="112" VerticalAlignment="Center" FontSize="12"
+                                   ToolTip="Общая непрозрачность меток оверлея" />
+                        <Slider x:Name="slOpacity" Minimum="30" Maximum="100" Value="85" Width="120"
+                                IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnOverlaySliderChanged"
+                                ToolTip="Общая непрозрачность меток оверлея" />
+                        <TextBox x:Name="tbOpacityValue" Width="48" Margin="6,0,0,0" HorizontalContentAlignment="Center"
+                                 TextChanged="OnOverlayTextChanged" ToolTip="Целое число 30…100" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <TextBlock Text="Размер от края, px:" Width="112" VerticalAlignment="Center" FontSize="12"
+                                   ToolTip="Насколько глубоко свечение заходит от края экрана (пресет «Кромка»); для «Дуг» — близость дуг к краю" />
+                        <Slider x:Name="slSize" Minimum="60" Maximum="220" Value="130" Width="120"
+                                IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnOverlaySliderChanged"
+                                ToolTip="Насколько глубоко свечение заходит от края экрана (пресет «Кромка»); для «Дуг» — близость дуг к краю" />
+                        <TextBox x:Name="tbSizeValue" Width="48" Margin="6,0,0,0" HorizontalContentAlignment="Center"
+                                 TextChanged="OnOverlayTextChanged" ToolTip="Целое число 60…220" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <TextBlock Text="Ширина реакции, °:" Width="112" VerticalAlignment="Center" FontSize="12"
+                                   ToolTip="Угловая ширина сегмента, который подсвечивается одним событием" />
+                        <Slider x:Name="slHalfWidth" Minimum="8" Maximum="30" Value="16" Width="120"
+                                IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnOverlaySliderChanged"
+                                ToolTip="Угловая ширина сегмента, который подсвечивается одним событием" />
+                        <TextBox x:Name="tbHalfWidthValue" Width="48" Margin="6,0,0,0" HorizontalContentAlignment="Center"
+                                 TextChanged="OnOverlayTextChanged" ToolTip="Целое число 8…30" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <TextBlock Text="Затухание, с:" Width="112" VerticalAlignment="Center" FontSize="12"
+                                   ToolTip="За сколько секунд метка гаснет после конца события" />
+                        <Slider x:Name="slFade" Minimum="1" Maximum="3" Value="1" Width="120"
+                                IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnOverlaySliderChanged"
+                                ToolTip="За сколько секунд метка гаснет после конца события" />
+                        <TextBox x:Name="tbFadeValue" Width="48" Margin="6,0,0,0" HorizontalContentAlignment="Center"
+                                 TextChanged="OnOverlayTextChanged" ToolTip="Целое число 1…3" />
+                    </StackPanel>
+                    <TextBlock Text="Скрытые зоны (0 = перед):" Foreground="#9CDCFE" Margin="0,10,0,2" />
+                    <WrapPanel x:Name="hiddenZonesPanel" />
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button x:Name="btnPreview" Content="Предпросмотр оверлея" Click="OnPreviewOverlay"
+                                ToolTip="Показать оверлей с тестовыми метками по всем зонам — проверить настройки без игры" />
+                        <Button x:Name="btnResetOverlay" Content="Сбросить настройки оверлея" Margin="8,0,0,0" Click="OnResetOverlay"
+                                ToolTip="Вернуть вид, цвет, зоны и затухание к значениям по умолчанию (хоткей не сбрасывается)" />
+                    </StackPanel>
+                    <TextBlock Text="Дуги: дуга зоны + тонкая метка точного азимута. Кромка: свечение вдоль краёв. Работает в оконном режиме и «окно без рамки»; в полноэкранном исключительном оверлей не виден."
+                               TextWrapping="Wrap" Foreground="#808080" FontSize="11" Margin="0,6,0,0" />
+                </StackPanel>
+            </GroupBox>
+        </StackPanel>
+        </ScrollViewer>
+
+        <!-- Радар + полосы + кнопки -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <GroupBox Grid.Row="0" Header="Направление (0° = перед, ±90° = бока, ±180° = зад)" Foreground="#9CDCFE">
+                <DockPanel>
+                    <TextBlock x:Name="tbRadarMode" DockPanel.Dock="Bottom" Margin="2,6,2,2" FontSize="11"
+                               Foreground="#808080" Text="Режим (180°/360°) определяется по наличию задних каналов в миксе." />
+                    <Border Background="#141418" CornerRadius="8" BorderBrush="#26262B" BorderThickness="1">
+                        <Canvas x:Name="radar" SizeChanged="OnRadarSizeChanged" Background="Transparent" />
+                    </Border>
+                </DockPanel>
+            </GroupBox>
+            <Grid Grid.Row="1" Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <GroupBox Grid.Column="0" Header="Полосы: L/R превышение над фоном, дБ" Foreground="#9CDCFE">
+                    <StackPanel x:Name="metersPanel" Margin="6" />
+                </GroupBox>
+                <StackPanel Grid.Column="1" Width="180" Margin="10,0,0,0">
+                    <Button x:Name="btnStart" Height="46" Click="OnStartStop"
+                            Background="#2F6B4F" Foreground="White" Content="▶  Старт" FontSize="15" FontWeight="Bold" />
+                    <Button x:Name="btnOverlayToggle" Height="40" Margin="0,8,0,0" Click="OnOverlayToggle"
+                            Content="Оверлей: ВЫКЛ" FontSize="14" FontWeight="SemiBold"
+                            ToolTip="Включить/выключить оверлей поверх игр (также глобальный хоткей)" />
+                    <TextBlock x:Name="tbStatus" TextWrapping="Wrap" Margin="2,10,0,0" Foreground="#9CDCFE"
+                               FontSize="11" MinHeight="40" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- Журнал -->
+        <Grid Grid.Column="2" x:Name="rightPanel" Margin="10,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <GroupBox Header="События" Foreground="#9CDCFE">
+                <ListBox x:Name="lbEvents" FontFamily="Consolas" FontSize="12"
+                         Background="#141418" BorderThickness="0" />
+            </GroupBox>
+        </Grid>
+    </Grid>
+</Window>

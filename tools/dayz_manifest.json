@@ -1,0 +1,32 @@
+[
+  {
+    "file": "C:/Users/ilya/Desktop/dayz_sounds/AK74 по 90 градусов (0, -90, -180, -270) повороты против часовой, первый выстрел перед игроком.wav",
+    "label": "AK74_cardinal",
+    "angles": [0, 90, 180, -90]
+  },
+  {
+    "file": "C:/Users/ilya/Desktop/dayz_sounds/AK74 по_ -45, -135, -225, -315  градусов повороты против часовой.wav",
+    "label": "AK74_diag",
+    "angles": [45, 135, -135, -45]
+  },
+  {
+    "file": "C:/Users/ilya/Desktop/dayz_sounds/CZ-550 по 90 градусов (0, -90, -180, -270) повороты против часовой, первый выстрел перед игроком.wav",
+    "label": "CZ550_cardinal",
+    "angles": [0, 90, 180, -90]
+  },
+  {
+    "file": "C:/Users/ilya/Desktop/dayz_sounds/CZ-550 по_ -45, -135, -225, -315  градусов повороты против часовой.wav",
+    "label": "CZ550_diag",
+    "angles": [45, 135, -135, -45]
+  },
+  {
+    "file": "C:/Users/ilya/Desktop/dayz_sounds/Очередь с AK74; Начальное положение -180 градусов от источника звука; Постепенный поворот по часовой стрелке.wav",
+    "label": "AK74_burst_cw",
+    "angles": null
+  },
+  {
+    "file": "C:/Users/ilya/Desktop/dayz_sounds/Очередь с AK74; Начальное положение -180 градусов от источника звука; Постепенный поворот против часовой стрелке.wav",
+    "label": "AK74_burst_ccw",
+    "angles": null
+  }
+]
