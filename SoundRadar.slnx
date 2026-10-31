@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SoundRadar.App/SoundRadar.App.csproj" />
+    <Project Path="src/SoundRadar.Core/SoundRadar.Core.csproj" />
+    <Project Path="src/SoundRadar.Emitter/SoundRadar.Emitter.csproj" />
+    <Project Path="src/SoundRadar.Replay/SoundRadar.Replay.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SoundRadar.Core.Tests/SoundRadar.Core.Tests.csproj" />
+  </Folder>
+</Solution>
