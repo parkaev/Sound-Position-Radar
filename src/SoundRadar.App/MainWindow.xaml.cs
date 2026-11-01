@@ -263,21 +263,9 @@ public partial class MainWindow : Window
         cbMonitor.SelectedIndex = Math.Clamp(Config.OverlayMonitor, 0, screens.Length - 1);
         ApplyLogVisibility();
         RebuildHiddenZonesPanel();
-        foreach (var item in cbTheme.Items.Cast<ComboBoxItem>())
-        {
-            var code = item.Content?.ToString() switch
-            {
-                "Тёмная" => ThemeManager.Dark,
-                "Светлая" => ThemeManager.Light,
-                _ => ThemeManager.System,
-            };
-            if (code == Config.Theme)
-                item.IsSelected = true;
-        }
-        foreach (var item in cbTheme.Items.Cast<ComboBoxItem>())
-            if (item.Content?.ToString() == Config.Theme)
-                item.IsSelected = true;
-        tbVersion.Text = "v" + UpdateChecker.CurrentVersion();
+        SelectThemeItem(cbTheme, Config.Theme);
+        SelectThemeItem(cbThemeCross, Config.Theme);
+        tbVersion.Text = tbVersionCross.Text = "v" + UpdateChecker.CurrentVersion();
         _ = CheckUpdatesAsync(quiet: true);
         foreach (var item in cbColorMode.Items.Cast<ComboBoxItem>())
         {
@@ -1154,16 +1142,22 @@ public partial class MainWindow : Window
 
     // ---- тема, справка, обновления ---------------------------------------------------------
 
+    /// <summary>Футер (тема/справка/версия) есть на обеих страницах — комбобоксы парные,
+    /// выбор синхронизируется. Хендлер работает от любого из них.</summary>
     private void OnThemeChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || cbTheme.SelectedItem is not ComboBoxItem item)
+        if (!IsLoaded || sender is not ComboBox combo || combo.SelectedItem is not ComboBoxItem item)
             return;
-        Config.Theme = item.Content?.ToString() switch
+        var theme = item.Content?.ToString() switch
         {
             "Тёмная" => ThemeManager.Dark,
             "Светлая" => ThemeManager.Light,
             _ => ThemeManager.System,
         };
+        // Начальная загрузка и синхронизация парного комбобокса приходят с тем же значением.
+        if (theme == Config.Theme)
+            return;
+        Config.Theme = theme;
         ThemeManager.Apply(this, Config.Theme);
         RebuildRadar();
         BuildMeters();
@@ -1174,7 +1168,30 @@ public partial class MainWindow : Window
         var dark = ThemeManager.IsDark(Config.Theme);
         overlay?.SetHintTheme(dark);
         ScreenToast.RefreshTheme(dark);
+        var other = ReferenceEquals(combo, cbTheme) ? cbThemeCross : cbTheme;
+        foreach (var i in other.Items.Cast<ComboBoxItem>())
+            if (i.Content?.ToString() == item.Content?.ToString())
+                i.IsSelected = true;
         SaveConfig();
+    }
+
+    /// <summary>Выбрать в комбобоксе темы пункт, соответствующий коду конфига.</summary>
+    private static void SelectThemeItem(ComboBox combo, string code)
+    {
+        foreach (var item in combo.Items.Cast<ComboBoxItem>())
+        {
+            var c = item.Content?.ToString() switch
+            {
+                "Тёмная" => ThemeManager.Dark,
+                "Светлая" => ThemeManager.Light,
+                _ => ThemeManager.System,
+            };
+            if (c == code)
+            {
+                item.IsSelected = true;
+                return;
+            }
+        }
     }
 
     private void OnHelpClick(object sender, RoutedEventArgs e) => ShowHelp();

@@ -11,7 +11,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Навигация по страницам: «Радар» (детектор + оверлей радара) и «Прицел». -->
@@ -206,6 +205,30 @@
                     </GroupBox>
                 </StackPanel>
             </ScrollViewer>
+
+            <!-- Мини-футер: тема, справка, версия -->
+            <Border Grid.Row="1" Margin="0,10,0,0" Background="{DynamicResource Brush.Card}"
+                    BorderBrush="{DynamicResource Brush.CardBorder}" BorderThickness="1" CornerRadius="10" Padding="10,7">
+                <DockPanel LastChildFill="False">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                        <TextBlock Text="Тема:" VerticalAlignment="Center" Margin="2,0,6,0"
+                                   Foreground="{DynamicResource Brush.Muted}" />
+                        <ComboBox x:Name="cbTheme" Width="110" SelectionChanged="OnThemeChanged">
+                            <ComboBoxItem>Системная</ComboBoxItem>
+                            <ComboBoxItem>Тёмная</ComboBoxItem>
+                            <ComboBoxItem>Светлая</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                        <Button x:Name="btnHelp" Content="Справка" Padding="9,4" Click="OnHelpClick"
+                                ToolTip="Описание всех настроек" />
+                        <TextBlock x:Name="tbVersion" Margin="12,2,2,0" VerticalAlignment="Center" Cursor="Hand"
+                                   MouseLeftButtonUp="OnVersionClick" Foreground="{DynamicResource Brush.Accent}"
+                                   TextDecorations="Underline" Text="v0.0.0"
+                                   ToolTip="Проверить обновления" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
         </Grid>
 
         <!-- Колонка 2: радар + полосы + кнопки пуска -->
@@ -276,7 +299,11 @@
             </Grid.ColumnDefinitions>
 
             <Grid Grid.Column="0" Margin="10,10,6,10">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="2,0,8,4">
                         <GroupBox Header="Стиль прицела">
                             <StackPanel>
@@ -400,6 +427,30 @@
                                    TextWrapping="Wrap" Foreground="{DynamicResource Brush.Muted}" FontSize="11" Margin="0,6,0,0" />
                     </StackPanel>
                 </ScrollViewer>
+
+                <!-- Мини-футер страницы прицела: тот же блок, парные имена (синхронизируются в коде) -->
+                <Border Grid.Row="1" Margin="0,10,0,0" Background="{DynamicResource Brush.Card}"
+                        BorderBrush="{DynamicResource Brush.CardBorder}" BorderThickness="1" CornerRadius="10" Padding="10,7">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                            <TextBlock Text="Тема:" VerticalAlignment="Center" Margin="2,0,6,0"
+                                       Foreground="{DynamicResource Brush.Muted}" />
+                            <ComboBox x:Name="cbThemeCross" Width="110" SelectionChanged="OnThemeChanged">
+                                <ComboBoxItem>Системная</ComboBoxItem>
+                                <ComboBoxItem>Тёмная</ComboBoxItem>
+                                <ComboBoxItem>Светлая</ComboBoxItem>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                            <Button x:Name="btnHelpCross" Content="Справка" Padding="9,4" Click="OnHelpClick"
+                                    ToolTip="Описание всех настроек" />
+                            <TextBlock x:Name="tbVersionCross" Margin="12,2,2,0" VerticalAlignment="Center" Cursor="Hand"
+                                       MouseLeftButtonUp="OnVersionClick" Foreground="{DynamicResource Brush.Accent}"
+                                       TextDecorations="Underline" Text="v0.0.0"
+                                       ToolTip="Проверить обновления" />
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
             </Grid>
 
             <Grid Grid.Column="1" Margin="6,10,10,10">
@@ -418,31 +469,6 @@
                         ToolTip="Включить/выключить прицел поверх игр (можно назначить глобальный хоткей)" />
             </Grid>
         </Grid>
-
-        <!-- Общий футер (обе страницы): тема, справка, версия -->
-        <Border Grid.Row="2" HorizontalAlignment="Left" Width="414" Margin="20,0,0,10"
-                Background="{DynamicResource Brush.Card}"
-                BorderBrush="{DynamicResource Brush.CardBorder}" BorderThickness="1" CornerRadius="10" Padding="10,7">
-            <DockPanel LastChildFill="False">
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
-                    <TextBlock Text="Тема:" VerticalAlignment="Center" Margin="2,0,6,0"
-                               Foreground="{DynamicResource Brush.Muted}" />
-                    <ComboBox x:Name="cbTheme" Width="110" SelectionChanged="OnThemeChanged">
-                        <ComboBoxItem>Системная</ComboBoxItem>
-                        <ComboBoxItem>Тёмная</ComboBoxItem>
-                        <ComboBoxItem>Светлая</ComboBoxItem>
-                    </ComboBox>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
-                    <Button x:Name="btnHelp" Content="Справка" Padding="9,4" Click="OnHelpClick"
-                            ToolTip="Описание всех настроек" />
-                    <TextBlock x:Name="tbVersion" Margin="12,2,2,0" VerticalAlignment="Center" Cursor="Hand"
-                               MouseLeftButtonUp="OnVersionClick" Foreground="{DynamicResource Brush.Accent}"
-                               TextDecorations="Underline" Text="v0.0.0"
-                               ToolTip="Проверить обновления" />
-                </StackPanel>
-            </DockPanel>
-        </Border>
 
         <!-- Слой справки: панель поверх размытого основного окна, вместо отдельного окна -->
         <Grid x:Name="helpOverlay" Grid.Row="0" Grid.RowSpan="2" Visibility="Collapsed" Background="{DynamicResource Brush.Scrim}">
