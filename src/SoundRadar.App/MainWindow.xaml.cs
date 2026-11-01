@@ -525,9 +525,10 @@ public partial class MainWindow : Window
             OpenOverlay(demo: overlayDemo);
         UpdateOverlayButtons();
         // При включении плашку «активен» показывает сам оверлей (левый верхний угол
-        // экрана). При выключении окна оверлея уже нет — уведомление показывает тост.
+        // экрана). При выключении окна оверлея уже нет — уведомление показывает тост
+        // на ТОМ ЖЕ мониторе, где был оверлей.
         if (overlay is null)
-            ScreenToast.Show("Sound Radar — оверлей выключен", ThemeManager.IsDark(Config.Theme));
+            ScreenToast.Show("Sound Radar — оверлей выключен", ThemeManager.IsDark(Config.Theme), Config.OverlayMonitor);
     }
 
     private void OpenOverlay(bool demo)

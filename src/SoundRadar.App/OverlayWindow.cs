@@ -76,7 +76,6 @@ public sealed class OverlayWindow : Window
         Focusable = false;
         Topmost = true;
         Title = "Sound Radar Overlay";
-        PositionOnMonitor();
 
         // Уведомление «активен» в левом верхнем углу экрана — в цветах темы приложения.
         hint = new Border
@@ -164,6 +163,8 @@ public sealed class OverlayWindow : Window
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         var style = GetWindowLongW(hwnd, GWL_EXSTYLE);
         _ = SetWindowLongW(hwnd, GWL_EXSTYLE, (int)((uint)style | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
+        // Позиция — только после того, как инициализатор объекта задал MonitorIndex.
+        PositionOnMonitor();
     }
 
     protected override void OnClosed(EventArgs e)
@@ -210,8 +211,9 @@ public sealed class OverlayWindow : Window
     /// <summary>Индекс монитора (0 = основной). При смене — RepositionToMonitor().</summary>
     public int MonitorIndex { get; set; }
 
-    /// <summary>Разместить окно на выбранном мониторе (физические пиксели экрана / DPI монитора).
-    /// Точный для мониторов с одинаковым масштабом; для смешанного DPI — приблизительно.</summary>
+    /// <summary>Разместить окно на выбранном мониторе. Сначала приблизительно в DIP (для
+    /// первого показа без мигания), затем ТОЧНО в физических пикселях через SetWindowPos —
+    /// Win32-координаты не зависят от DPI-виртуализации WPF и смешанных масштабов.</summary>
     public void PositionOnMonitor()
     {
         var screens = System.Windows.Forms.Screen.AllScreens;
@@ -222,6 +224,17 @@ public sealed class OverlayWindow : Window
         Top = b.Top / scale;
         Width = b.Width / scale;
         Height = b.Height / scale;
+        PhysicalReposition(b);
+    }
+
+    /// <summary>Жёстко выставить окно в физические пиксели bounds выбранного монитора.</summary>
+    private void PhysicalReposition(System.Drawing.Rectangle b)
+    {
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero)
+            return;
+        _ = SetWindowPos(hwnd, IntPtr.Zero, b.Left, b.Top, b.Width, b.Height,
+            SwpNoZorder | SwpNoActivate | SwpNoOwnerReorder);
     }
 
     /// <summary>Эффективный DPI монитора (MDT_EFFECTIVE_DPI), 96 = 100%.</summary>
@@ -250,6 +263,13 @@ public sealed class OverlayWindow : Window
 
     [DllImport("shcore.dll")]
     private static extern int GetDpiForMonitor(IntPtr hMonitor, int dpiType, out uint dpiX, out uint dpiY);
+
+    private const uint SwpNoZorder = 0x0004;
+    private const uint SwpNoOwnerReorder = 0x0200;
+    private const uint SwpNoActivate = 0x0010;
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
 
     private bool IsAlive(Entry entry) =>
         demo ? entry.Age < 26 : EntryActiveInHub(entry);

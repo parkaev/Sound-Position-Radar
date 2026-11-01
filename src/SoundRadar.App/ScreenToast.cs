@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -19,10 +20,13 @@ internal static class ScreenToast
     public static void RefreshTheme(bool dark)
     {
         if (_toast is { IsVisible: true })
-            Show(_lastMessage, dark);
+            Show(_lastMessage, dark, _monitorIndex);
     }
 
-    public static void Show(string message, bool dark)
+    private static int _monitorIndex;
+
+    /// <summary>Показать тост в левом верхнем углу заданного монитора (того же, где оверлей).</summary>
+    public static void Show(string message, bool dark, int monitorIndex)
     {
         if (_toast is null)
         {
@@ -38,8 +42,6 @@ internal static class ScreenToast
                 // Окно размером с плашку: без этого безрамочное окно растягивается на экран.
                 SizeToContent = SizeToContent.WidthAndHeight,
                 MaxWidth = 420,
-                Left = 16,
-                Top = 16,
                 Content = new Border
                 {
                     CornerRadius = new CornerRadius(8),
@@ -66,10 +68,34 @@ internal static class ScreenToast
             ? Brushes.White
             : new SolidColorBrush(Color.FromRgb(0x1B, 0x1B, 0x1F));
 
+        _monitorIndex = monitorIndex;
+        var screens = System.Windows.Forms.Screen.AllScreens;
+        var b = screens[Math.Clamp(monitorIndex, 0, screens.Length - 1)].Bounds;
+        // Приблизительно в DIP до показа, затем точно в физических пикселях —
+        // тост появляется там же, где плашка оверлея, независимо от DPI мониторов.
+        _toast.Left = (b.Left + 16) / 1.0;
+        _toast.Top = (b.Top + 16) / 1.0;
         _toast.Show();
+        MoveToMonitor(b);
         _hideTimer.Stop();
         _hideTimer.Start();
     }
+
+    private static void MoveToMonitor(System.Drawing.Rectangle b)
+    {
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(_toast!).Handle;
+        if (hwnd == IntPtr.Zero)
+            return;
+        _ = SetWindowPos(hwnd, IntPtr.Zero, b.Left + 16, b.Top + 16, 0, 0,
+            SwpNoZorder | SwpNoActivate | SwpNoSize);
+    }
+
+    private const uint SwpNoZorder = 0x0004;
+    private const uint SwpNoActivate = 0x0010;
+    private const uint SwpNoSize = 0x0001;
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
 
     private static void Hide()
     {
