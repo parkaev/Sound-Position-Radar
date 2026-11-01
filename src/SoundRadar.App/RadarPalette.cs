@@ -5,29 +5,19 @@ namespace SoundRadar.App;
 /// <summary>Общая палитра индикации: режимы цвета и именованные оттенки.</summary>
 internal static class RadarPalette
 {
-    /// <summary>Цвет по громкости события (классический зелёный → жёлтый → красный).</summary>
-    public static Color SalienceColor(double salienceDb)
-    {
-        var t = Math.Clamp((salienceDb - 6) / 18, 0, 1);
-        return t < 0.5
-            ? Lerp(Color.FromRgb(0x4C, 0xAF, 0x50), Color.FromRgb(0xFF, 0xC1, 0x07), t * 2)
-            : Lerp(Color.FromRgb(0xFF, 0xC1, 0x07), Color.FromRgb(0xF4, 0x43, 0x36), (t - 0.5) * 2);
-    }
-
     /// <summary>
-    /// Цвет по «близости»: зеленоватый — звук дальше, жёлтый — средне,
-    /// красный — близко, тёмно-красный — очень близко. Диапазон растянут под реальные
-    /// salience DayZ (~15…55 дБ превышения).
+    /// Цвет по доминирующей полосе события: низкие частоты (бас) — тёмно-красный,
+    /// высокие — зелёный. Позволяет на глаз отделять «низкие» звуки (выстрелы, техника)
+    /// от «высоких» (щелчки, птицы, шаги по металлу).
     /// </summary>
-    public static Color ProximityColor(double salienceDb)
+    public static Color FrequencyColor(int band) => band switch
     {
-        var t = Math.Clamp((salienceDb - 8.0) / 42.0, 0, 1);
-        if (t < 0.35)
-            return Lerp(Color.FromRgb(0x4C, 0xAF, 0x50), Color.FromRgb(0xFF, 0xC1, 0x07), t / 0.35);
-        if (t < 0.7)
-            return Lerp(Color.FromRgb(0xFF, 0xC1, 0x07), Color.FromRgb(0xF4, 0x43, 0x36), (t - 0.35) / 0.35);
-        return Lerp(Color.FromRgb(0xF4, 0x43, 0x36), Color.FromRgb(0x8B, 0x00, 0x00), (t - 0.7) / 0.3);
-    }
+        0 => Color.FromRgb(0x8F, 0x1D, 0x1D), // <150 Гц — тёмно-красный
+        1 => Color.FromRgb(0xC4, 0x3C, 0x2C), // 150–500 — красный
+        2 => Color.FromRgb(0xE0, 0x8A, 0x3C), // 0.5–2к — оранжевый
+        3 => Color.FromRgb(0xA8, 0xC0, 0x4B), // 2–6к — жёлто-зелёный
+        _ => Color.FromRgb(0x3F, 0xA8, 0x4F), // 6к+ — зелёный
+    };
 
     /// <summary>Именованные оттенки для режима постоянного цвета.</summary>
     public static Color NamedColor(string name) => name switch
@@ -38,9 +28,4 @@ internal static class RadarPalette
         "Белый" => Color.FromRgb(0xF5, 0xF5, 0xF5),
         _ => Color.FromRgb(0xF4, 0x43, 0x36), // Красный
     };
-
-    public static Color Lerp(Color a, Color b, double t) => Color.FromRgb(
-        (byte)(a.R + (b.R - a.R) * t),
-        (byte)(a.G + (b.G - a.G) * t),
-        (byte)(a.B + (b.B - a.B) * t));
 }

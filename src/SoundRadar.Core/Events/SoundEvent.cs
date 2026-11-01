@@ -31,14 +31,8 @@ public sealed class SoundEvent
     /// <summary>0…1 — насколько уверенно мы видим источник.</summary>
     public double Confidence { get; internal set; }
 
-    /// <summary>Пиковое превышение над фоном по каждой полосе, дБ — база для будущей классификации.</summary>
+    /// <summary>Пиковое превышение над фоном по каждой полосе, дБ.</summary>
     public double[] BandSalienceDb { get; } = new double[AnalyzerOptions.BandEdgesHz.Length - 1];
-
-    /// <summary>Тип звука по классификатору; обновляется по ходу события.</summary>
-    public SoundEventType Type { get; internal set; } = SoundEventType.Unknown;
-
-    /// <summary>0…1 — уверенность классификации типа.</summary>
-    public double TypeConfidence { get; internal set; }
 
     /// <summary>Хоть один блок события нёс энергию в задних каналах (многоканальный микс).</summary>
     public bool RearSeen { get; internal set; }

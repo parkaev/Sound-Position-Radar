@@ -41,8 +41,6 @@ public sealed class JsonlEventLogger : IDisposable
                 azimuthDeg = Math.Round(e.AzimuthDeg, 1),
                 salienceDb = Math.Round(e.SalienceDb, 1),
                 confidence = Math.Round(e.Confidence, 2),
-                kind = e.Type.ToString().ToLowerInvariant(),
-                kindConfidence = Math.Round(e.TypeConfidence, 2),
                 frontalOnly = e.FrontalOnly,
                 bandSalienceDb = e.BandSalienceDb.Select(v => Math.Round(v, 1)).ToArray(),
             }));

@@ -72,9 +72,9 @@ public sealed class SoundRadarConfig
     /// (свечение вдоль краёв экрана, прозрачно к центру).</summary>
     public string OverlayPreset { get; set; } = "Дуги";
 
-    /// <summary>Режим цвета оверлея: "Proximity" (по близости), "Salience" (по громкости),
-    /// "Fixed" (постоянный оттенок).</summary>
-    public string OverlayColorMode { get; set; } = "Proximity";
+    /// <summary>Режим цвета оверлея: "Frequency" (по частотам: бас — тёмно-красный, верха —
+    /// зелёный) или "Fixed" (постоянный оттенок).</summary>
+    public string OverlayColorMode { get; set; } = "Frequency";
 
     /// <summary>Оттенок для режима постоянного цвета.</summary>
     public string OverlayColorName { get; set; } = "Красный";
@@ -108,6 +108,9 @@ public sealed class SoundRadarConfig
                 // Миграция: переименованный пресет оверлея.
                 if (cfg.OverlayPreset == "Кромка (градиент)")
                     cfg.OverlayPreset = "Свечение краёв";
+                // Миграция: режимы цвета «по близости»/«по громкости» заменены на «по частотам».
+                if (cfg.OverlayColorMode is "Proximity" or "Salience")
+                    cfg.OverlayColorMode = "Frequency";
                 return cfg;
             }
         }

@@ -259,9 +259,8 @@ public partial class MainWindow : Window
         {
             var code = item.Content?.ToString() switch
             {
-                "По громкости" => "Salience",
                 "Постоянный" => "Fixed",
-                _ => "Proximity",
+                _ => "Frequency",
             };
             if (code == Config.OverlayColorMode)
                 item.IsSelected = true;
@@ -642,9 +641,8 @@ public partial class MainWindow : Window
             return;
         var mode = item.Content?.ToString() switch
         {
-            "По громкости" => "Salience",
             "Постоянный" => "Fixed",
-            _ => "Proximity",
+            _ => "Frequency",
         };
         Config.OverlayColorMode = mode;
         cbTintColor.IsEnabled = mode == "Fixed";
@@ -961,18 +959,10 @@ public partial class MainWindow : Window
             return;
         // Короткий формат: строка должна влезать в узкую колонку без обрезки.
         lbEvents.Items.Insert(0,
-            $"{e.StartedUtc:HH:mm:ss.fff}  {e.AzimuthDeg,5:F0}°  s{e.SalienceDb,3:F0}  c{e.Confidence:F1}  {TypeTag(e.Type)}");
+            $"{e.StartedUtc:HH:mm:ss.fff}  {e.AzimuthDeg,5:F0}°  s{e.SalienceDb,3:F0}  c{e.Confidence:F1}");
         if (lbEvents.Items.Count > 200)
             lbEvents.Items.RemoveAt(lbEvents.Items.Count - 1);
     }
-
-    private static string TypeTag(SoundEventType t) => t switch
-    {
-        SoundEventType.Shot => "ВЫСТР",
-        SoundEventType.Footsteps => "ШАГИ",
-        SoundEventType.Click => "ЩЕЛЧ",
-        _ => "·",
-    };
 
     // ---- радар -----------------------------------------------------------------------------
 
@@ -1254,7 +1244,7 @@ public partial class MainWindow : Window
             wedgeOpacity = 0.35 + 0.65 * ev.Confidence;
             var halfWidth = 6 + 8 * (1 - ev.Confidence);
             wedge.Points = WedgePoints(center, radius, ev.AzimuthDeg, halfWidth);
-            wedge.Fill = new SolidColorBrush(SalienceColor(ev.SalienceDb));
+            wedge.Fill = new SolidColorBrush(RadarPalette.FrequencyColor(DominantBand(ev.BandSalienceDb)));
         }
         else
         {
@@ -1264,7 +1254,15 @@ public partial class MainWindow : Window
         wedge.Opacity = wedgeOpacity < 0.03 ? 0 : wedgeOpacity;
     }
 
-    private static Color SalienceColor(double salienceDb) => RadarPalette.SalienceColor(salienceDb);
+    /// <summary>Самая громкая полоса события: 0 = бас … 4 = 6к+.</summary>
+    private static int DominantBand(double[] bandSalience)
+    {
+        var best = 0;
+        for (var b = 1; b < bandSalience.Length; b++)
+            if (bandSalience[b] > bandSalience[best])
+                best = b;
+        return best;
+    }
 
     private (Point center, double radius) RadarGeometry(double w, double h)
     {

@@ -296,11 +296,6 @@ public sealed class Analyzer
             for (var b = 0; b < bands; b++)
                 current.BandSalienceDb[b] = Math.Max(current.BandSalienceDb[b], exceed[b]);
 
-            // Классификация типа пересчитывается на каждом блоке: подпись маркера
-            // появляется сразу и стабилизируется к пику события.
-            var durMsSoFar = (audioSec - current.AudioStartSec) * 1000.0;
-            (current.Type, current.TypeConfidence) = SoundClassifier.Classify(current.BandSalienceDb, durMsSoFar);
-
             // Событие затихло, когда почти все полосы ушли ниже порога затухания: одна шумная
             // полоса (птица в вч, порыв ветра в басах) не должна держать событие открытым вечно.
             var activeBands = 0;

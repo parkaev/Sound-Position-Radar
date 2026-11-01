@@ -111,9 +111,8 @@
                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                 <TextBlock Text="Цвет:" VerticalAlignment="Center" Margin="0,0,8,0" />
                                 <ComboBox x:Name="cbColorMode" Width="200" SelectionChanged="OnColorModeChanged"
-                                          ToolTip="По близости: зеленоватый — звук дальше, красный/тёмно-красный — очень близко. По громкости: классическая шкала. Постоянный: один выбранный оттенок.">
-                                    <ComboBoxItem>По близости</ComboBoxItem>
-                                    <ComboBoxItem>По громкости</ComboBoxItem>
+                                          ToolTip="По частотам: бас — тёмно-красный, верхние частоты — зелёный, видно характер звука. Постоянный: один выбранный оттенок.">
+                                    <ComboBoxItem>По частотам</ComboBoxItem>
                                     <ComboBoxItem>Постоянный</ComboBoxItem>
                                 </ComboBox>
                             </StackPanel>
