@@ -16,9 +16,18 @@ public sealed class EventHub
 
     private volatile SoundEvent? latestEvent;
     private volatile MeterFrame? latestMeter;
+    private readonly object activeGate = new();
+    private readonly List<SoundEvent> activeEvents = new();
 
     /// <summary>Текущее (или последнее) событие.</summary>
     public SoundEvent? LatestEvent => latestEvent;
+
+    /// <summary>Снимок активных (незавершённых) событий — для мульти-маркерных потребителей.</summary>
+    public SoundEvent[] GetActiveEvents()
+    {
+        lock (activeGate)
+            return activeEvents.ToArray();
+    }
 
     /// <summary>Последний снимок метров (null, пока анализатор не получил ни одного блока).</summary>
     public MeterFrame? LatestMeter => latestMeter;
@@ -26,12 +35,16 @@ public sealed class EventHub
     public void RaiseStarted(SoundEvent e)
     {
         latestEvent = e;
+        lock (activeGate)
+            activeEvents.Add(e);
         EventStarted?.Invoke(e);
     }
 
     public void RaiseEnded(SoundEvent e)
     {
         latestEvent = e;
+        lock (activeGate)
+            activeEvents.RemoveAll(x => x.Id == e.Id);
         EventEnded?.Invoke(e);
     }
 

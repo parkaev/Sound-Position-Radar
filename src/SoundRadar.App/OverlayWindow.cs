@@ -274,40 +274,44 @@ public sealed class OverlayWindow : Window
     private bool IsAlive(Entry entry) =>
         demo ? entry.Age < 26 : EntryActiveInHub(entry);
 
-    private bool EntryActiveInHub(Entry entry)
-    {
-        var ev = hub?.LatestEvent;
-        return ev is not null && ev.Id == entry.Id && ev.EndedUtc is null;
-    }
+    private bool EntryActiveInHub(Entry entry) =>
+        hub?.GetActiveEvents().Any(x => x.Id == entry.Id) == true;
 
     private void ReadHub()
     {
-        var ev = hub?.LatestEvent;
-        if (ev is null || ev.EndedUtc is not null)
+        var active = hub?.GetActiveEvents();
+        if (active is null)
             return;
 
-        var hidden = IsHidden(ev.AzimuthDeg);
-        // Скрытая зона без приглушения — событие не показываем и слот не занимаем.
-        if (hidden && !DimZones)
+        // Все активные события: каждый источник — свой маркер.
+        foreach (var ev in active)
         {
-            entries.RemoveAll(x => x.Id == ev.Id);
-            return;
-        }
+            if (ev.EndedUtc is not null)
+                continue;
 
-        var entry = entries.FirstOrDefault(x => x.Id == ev.Id);
-        if (entry is null)
-        {
-            entry = new Entry { Id = ev.Id };
-            entries.Add(entry);
-            while (entries.Count > MaxEntries)
-                entries.RemoveAt(0);
-        }
+            // Скрытая зона без приглушения — событие не показываем и слот не занимаем.
+            var hidden = IsHidden(ev.AzimuthDeg);
+            if (hidden && !DimZones)
+            {
+                entries.RemoveAll(x => x.Id == ev.Id);
+                continue;
+            }
 
-        // Пока событие живо — угол уточняется и метка яркая; приглушённая зона — тусклая.
-        entry.Azimuth = ev.AzimuthDeg;
-        entry.Salience = ev.SalienceDb;
-        entry.DominantBand = DominantBand(ev.BandSalienceDb);
-        entry.Opacity = hidden ? 0.35 : 1.0;
+            var entry = entries.FirstOrDefault(x => x.Id == ev.Id);
+            if (entry is null)
+            {
+                entry = new Entry { Id = ev.Id };
+                entries.Add(entry);
+                while (entries.Count > MaxEntries)
+                    entries.RemoveAt(0);
+            }
+
+            // Пока событие живо — угол уточняется и метка яркая; приглушённая зона — тусклая.
+            entry.Azimuth = ev.AzimuthDeg;
+            entry.Salience = ev.SalienceDb;
+            entry.DominantBand = DominantBand(ev.BandSalienceDb);
+            entry.Opacity = hidden ? 0.35 : 1.0;
+        }
     }
 
     /// <summary>Самая громкая полоса события: 0 = бас … 4 = 6к+.</summary>
