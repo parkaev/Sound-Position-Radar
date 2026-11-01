@@ -71,6 +71,10 @@ public static class ThemeManager
             B("Brush.SliderFill", "#4FC3F7");
             B("Brush.SliderTrack", "#3F3F46");
             B("Brush.ScrollThumb", "#55555C");
+            B("Brush.ScrollTrack", "#26262B");
+            B("Brush.ItemHover", "#2F2F37");
+            B("Brush.MeterTrack", "#2A2A2E");
+            B("Brush.RadarLabelHidden", "#E57373");
             B("Brush.ListBg", "#141418");
             B("Brush.RadarBg", "#141418");
             B("Brush.RadarRing", "#4A4A52");
@@ -103,6 +107,10 @@ public static class ThemeManager
             B("Brush.SliderFill", "#0B63C5");
             B("Brush.SliderTrack", "#D5D5DA");
             B("Brush.ScrollThumb", "#B0B0B8");
+            B("Brush.ScrollTrack", "#E7E7EA");
+            B("Brush.ItemHover", "#E2E7EF");
+            B("Brush.MeterTrack", "#E3E3E8");
+            B("Brush.RadarLabelHidden", "#B3403E");
             B("Brush.ListBg", "#FFFFFF");
             B("Brush.RadarBg", "#FBFBFC");
             B("Brush.RadarRing", "#B8B8BE");
@@ -134,11 +142,17 @@ public static class ThemeManager
         return rd;
     }
 
-    /// <summary>Подключить словарь темы окну и окрасить заголовок окна.</summary>
+    /// <summary>Подключить словарь темы окну и окрасить заголовок окна.
+    /// Прежний словарь темы удаляется: WPF ищет ресурсы в объединённых словарях с конца,
+    /// поэтому накопление словарей при повторных Apply ломало смену темы на лету.</summary>
     public static void Apply(Window window, string theme)
     {
         var dark = IsDark(theme);
-        window.Resources.MergedDictionaries.Insert(0, BuildDictionary(dark));
+        var md = window.Resources.MergedDictionaries;
+        for (var i = md.Count - 1; i >= 0; i--)
+            if (md[i].Contains("Brush.Window"))
+                md.RemoveAt(i);
+        md.Add(BuildDictionary(dark));
         SetTitleBarMode(window, dark);
     }
 

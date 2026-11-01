@@ -70,8 +70,9 @@ public partial class MainWindow : Window
     /// <summary>5 строк метров: подпись полосы, двухполосный бар (L сверху, R снизу), значение превышения.</summary>
     private void BuildMeters()
     {
-        var gray = new SolidColorBrush(Color.FromRgb(0x90, 0x90, 0x90));
-        var trackBg = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2E));
+        metersPanel.Children.Clear();
+        var gray = ThemeBrush("Brush.Muted", 0x90, 0x90, 0x90);
+        var trackBg = ThemeBrush("Brush.MeterTrack", 0x2A, 0x2A, 0x2E);
 
         for (var b = 0; b < BandCount; b++)
         {
@@ -164,6 +165,7 @@ public partial class MainWindow : Window
             {
                 ThemeManager.Apply(this, Config.Theme);
                 RebuildRadar();
+                BuildMeters();
                 UpdateOverlayButtons();
             }
         }
@@ -792,6 +794,7 @@ public partial class MainWindow : Window
         };
         ThemeManager.Apply(this, Config.Theme);
         RebuildRadar();
+        BuildMeters();
         UpdateOverlayButtons();
         SaveConfig();
     }
@@ -909,6 +912,15 @@ public partial class MainWindow : Window
 
     private void OnRadarSizeChanged(object sender, SizeChangedEventArgs e) => RebuildRadar();
 
+    // Поиск кисти темы: сначала ресурсы окна (словарь ThemeManager), потом запасной цвет.
+    // Application.Current.TryFindResource не видит словарь окна — здесь нужен именно TryFindResource окна.
+    private SolidColorBrush ThemeBrush(string key, byte r, byte g, byte b)
+    {
+        if (TryFindResource(key) is SolidColorBrush brush)
+            return brush;
+        return new SolidColorBrush(Color.FromRgb(r, g, b));
+    }
+
     private static double NormalizeAngle(double a)
     {
         a %= 360.0;
@@ -929,8 +941,8 @@ public partial class MainWindow : Window
         tickElements.Clear();
 
         var (center, radius) = RadarGeometry(w, h);
-        var stroke = new SolidColorBrush(Color.FromRgb(0x4A, 0x4A, 0x52));
-        var dim = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
+        var stroke = ThemeBrush("Brush.RadarRing", 0x4A, 0x4A, 0x52);
+        var dim = ThemeBrush("Brush.Muted", 0x80, 0x80, 0x80);
 
         ring = new Ellipse
         {
@@ -951,7 +963,7 @@ public partial class MainWindow : Window
         rearShade = new Polygon
         {
             Points = shadePoints,
-            Fill = new SolidColorBrush(Color.FromArgb(0x40, 0, 0, 0)),
+            Fill = (Brush?)TryFindResource("Brush.RearShade") ?? new SolidColorBrush(Color.FromArgb(0x40, 0, 0, 0)),
         };
         radar.Children.Add(rearShade);
 
@@ -990,8 +1002,8 @@ public partial class MainWindow : Window
                 // У нижней точки без знака: +180° и −180° — одна и та же сторона.
                 Text = Math.Abs(Math.Abs(centerDeg) - 180) < 0.5 ? "180°" : $"{centerDeg:+0;-0;0}°",
                 Foreground = isHidden
-                    ? new SolidColorBrush(Color.FromRgb(0xE5, 0x73, 0x73))
-                    : new SolidColorBrush(Color.FromRgb(0x9A, 0x9A, 0xA0)),
+                    ? ThemeBrush("Brush.RadarLabelHidden", 0xE5, 0x73, 0x73)
+                    : ThemeBrush("Brush.RadarLabel", 0x9A, 0x9A, 0xA0),
                 FontSize = 10,
             };
             Canvas.SetLeft(label, p.X - 11);
@@ -1009,7 +1021,7 @@ public partial class MainWindow : Window
                 new Point(center.X - 7, center.Y - radius - 2),
                 new Point(center.X + 7, center.Y - radius - 2),
             },
-            Fill = new SolidColorBrush(Color.FromRgb(0x9C, 0xDC, 0xFE)),
+            Fill = ThemeBrush("Brush.Accent", 0x9C, 0xDC, 0xFE),
         };
         radar.Children.Add(frontArrow);
         tickElements.Add(frontArrow);

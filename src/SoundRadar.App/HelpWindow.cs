@@ -66,7 +66,37 @@ public sealed class HelpWindow : Window
             "микс игры и включённый захват 8 каналов. В полноэкранном исключительном режиме оверлей не виден — " +
             "используйте «окно без рамки».");
 
-        Content = scroll;
+        // Корень: контент + футер с автором (клик по нику открывает профиль GitHub).
+        var root = new Grid();
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        Grid.SetRow(scroll, 0);
+        root.Children.Add(scroll);
+
+        var footer = new Border
+        {
+            BorderBrush = FindThemeBrush("Brush.CardBorder"),
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Background = FindThemeBrush("Brush.Footer"),
+            Padding = new Thickness(14, 8, 14, 8),
+        };
+        var author = new TextBlock { HorizontalAlignment = HorizontalAlignment.Right };
+        var link = new System.Windows.Documents.Hyperlink
+        {
+            NavigateUri = new Uri("https://github.com/parkaev"),
+            Foreground = FindThemeBrush("Brush.Accent"),
+            BaselineAlignment = System.Windows.BaselineAlignment.Center,
+            ToolTip = "Открыть профиль автора на GitHub",
+        };
+        link.Inlines.Add("parkaev");
+        link.RequestNavigate += (_, e) =>
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+        author.Inlines.Add(link);
+        footer.Child = author;
+        Grid.SetRow(footer, 1);
+        root.Children.Add(footer);
+
+        Content = root;
     }
 
     private static void AddTitle(StackPanel stack, string text)
