@@ -46,7 +46,6 @@ public partial class MainWindow : Window
     private Polygon? wedge;
     private Polygon? rearShade;
     private TextBlock? rearLabel;
-    private readonly List<UIElement> tickElements = new();
     private double wedgeOpacity;
     private bool surroundDetected;
 
@@ -168,6 +167,10 @@ public partial class MainWindow : Window
                 BuildMeters();
                 UpdateStartButton();
                 UpdateOverlayButtons();
+                UpdateSourceModeUi();
+                var dark = ThemeManager.IsDark(Config.Theme);
+                overlay?.SetHintTheme(dark);
+                ScreenToast.RefreshTheme(dark);
             }
         }
         return IntPtr.Zero;
@@ -285,6 +288,23 @@ public partial class MainWindow : Window
         if (Config.OverlayEnabled || overlayDemo)
             OpenOverlay(demo: overlayDemo);
         UpdateOverlayButtons();
+    }
+
+    private void OnSourceModeChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+        UpdateSourceModeUi();
+        SaveConfig();
+    }
+
+    // Захват процесса: список процессов и «дочерние процессы» доступны; всё устройство — нет.
+    private void UpdateSourceModeUi()
+    {
+        var isProcess = rbProcess.IsChecked == true;
+        cbProcess.IsEnabled = isProcess;
+        btnRefresh.IsEnabled = isProcess;
+        cbIncludeTree.IsEnabled = isProcess;
     }
 
     // ---- запуск / остановка ----------------------------------------------------------------
@@ -806,6 +826,10 @@ public partial class MainWindow : Window
         BuildMeters();
         UpdateStartButton();
         UpdateOverlayButtons();
+        UpdateSourceModeUi();
+        var dark = ThemeManager.IsDark(Config.Theme);
+        overlay?.SetHintTheme(dark);
+        ScreenToast.RefreshTheme(dark);
         SaveConfig();
     }
 
@@ -972,7 +996,6 @@ public partial class MainWindow : Window
         if (w < 60 || h < 60)
             return;
         radar.Children.Clear();
-        tickElements.Clear();
 
         var (center, radius) = RadarGeometry(w, h);
         var stroke = ThemeBrush("Brush.RadarRing", 0x4A, 0x4A, 0x52);
@@ -993,7 +1016,6 @@ public partial class MainWindow : Window
             Canvas.SetLeft(ring, center.X - radius);
             Canvas.SetTop(ring, center.Y - radius);
             radar.Children.Add(ring);
-            tickElements.Add(ring);
 
             // Задняя (нижняя) половина — заливка-подсказка: в 7.1-режиме пока задние
             // каналы не подтверждены, стерео-микс не различает зад.
@@ -1046,7 +1068,6 @@ public partial class MainWindow : Window
             var inner = PointOnCircle(center, radius - 12, boundary);
             var line = new Line { X1 = outer.X, Y1 = outer.Y, X2 = inner.X, Y2 = inner.Y, Stroke = stroke, StrokeThickness = 1 };
             radar.Children.Add(line);
-            tickElements.Add(line);
         }
 
         // Подсветка отключённых зон: полупрозрачная полоса вдоль дуги по ширине зоны.
@@ -1087,7 +1108,6 @@ public partial class MainWindow : Window
             Canvas.SetLeft(label, p.X - 11);
             Canvas.SetTop(label, p.Y - topOffset);
             radar.Children.Add(label);
-            tickElements.Add(label);
         }
 
         // Стрелка «перед» на верхней точке.
@@ -1102,7 +1122,6 @@ public partial class MainWindow : Window
             Fill = ThemeBrush("Brush.Accent", 0x9C, 0xDC, 0xFE),
         };
         radar.Children.Add(frontArrow);
-        tickElements.Add(frontArrow);
 
         wedge = new Polygon { Points = WedgePoints(center, radius, 0, 10), Fill = Brushes.LimeGreen, Opacity = 0 };
         radar.Children.Add(wedge);

@@ -13,6 +13,14 @@ internal static class ScreenToast
 {
     private static Window? _toast;
     private static DispatcherTimer? _hideTimer;
+    private static string _lastMessage = "";
+
+    /// <summary>Перекрасить уже видимый тост под новую тему приложения.</summary>
+    public static void RefreshTheme(bool dark)
+    {
+        if (_toast is { IsVisible: true })
+            Show(_lastMessage, dark);
+    }
 
     public static void Show(string message, bool dark)
     {
@@ -42,6 +50,7 @@ internal static class ScreenToast
 
         var border = (Border)_toast.Content;
         var tb = (TextBlock)border.Child;
+        _lastMessage = message;
         tb.Text = message;
         border.Background = dark
             ? new SolidColorBrush(Color.FromArgb(0xB0, 0x1E, 0x1E, 0x22))

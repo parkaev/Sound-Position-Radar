@@ -25,8 +25,10 @@
                 <StackPanel Margin="2,0,8,4">
                     <GroupBox Header="Источник звука">
                         <StackPanel>
-                            <RadioButton x:Name="rbProcess" Content="Звук конкретного процесса" IsChecked="True" GroupName="src" />
-                            <RadioButton x:Name="rbDevice" Content="Всё выходное устройство" GroupName="src" Margin="0,4,0,0" />
+                            <RadioButton x:Name="rbProcess" Content="Звук конкретного процесса" IsChecked="True" GroupName="src"
+                                         Checked="OnSourceModeChanged" />
+                            <RadioButton x:Name="rbDevice" Content="Всё выходное устройство" GroupName="src" Margin="0,4,0,0"
+                                         Checked="OnSourceModeChanged" />
                             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                                 <ComboBox x:Name="cbProcess" Width="210" />
                                 <Button x:Name="btnRefresh" Content="⟳" Width="32" Margin="6,0,0,0" Click="OnRefreshProcesses"
@@ -89,7 +91,7 @@
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                 <TextBlock Text="Хоткей вкл/выкл:" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                <TextBox x:Name="tbHotkey" Width="110" IsReadOnly="True" PreviewKeyDown="OnHotkeyKeyDown"
+                                <TextBox x:Name="tbHotkey" Width="135" IsReadOnly="True" PreviewKeyDown="OnHotkeyKeyDown"
                                          GotKeyboardFocus="OnHotkeyGotFocus" LostKeyboardFocus="OnHotkeyLostFocus"
                                          Text="наж. для установки" Cursor="Hand" ToolTip="Кликните и нажмите сочетание (работает глобально, поверх игры)" />
                                 <Button x:Name="btnHotkeyReset" Content="Сброс" Margin="6,0,0,0" Click="OnHotkeyReset"

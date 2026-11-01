@@ -34,6 +34,22 @@ public sealed class OverlayWindow : Window
     private int demoTick;
     private HashSet<int> hiddenZoneSet = new();
 
+    /// <summary>Перекрасить плашку «активен» под тему приложения (смена темы при открытом оверлее).</summary>
+    public void SetHintTheme(bool dark)
+    {
+        hint.Background = dark
+            ? new SolidColorBrush(Color.FromArgb(0xB0, 0x1E, 0x1E, 0x22))
+            : new SolidColorBrush(Color.FromArgb(0xC8, 0xFF, 0xFF, 0xFF));
+        hint.BorderBrush = dark
+            ? Brushes.Transparent
+            : new SolidColorBrush(Color.FromArgb(0x50, 0x00, 0x00, 0x00));
+        hint.BorderThickness = new Thickness(dark ? 0 : 1);
+        if (hint.Child is TextBlock tb)
+            tb.Foreground = dark
+                ? Brushes.White
+                : new SolidColorBrush(Color.FromRgb(0x1B, 0x1B, 0x1F));
+    }
+
     private sealed class Entry
     {
         public Guid Id;
@@ -70,11 +86,6 @@ public sealed class OverlayWindow : Window
         // Уведомление «активен» в левом верхнем углу экрана — в цветах темы приложения.
         hint = new Border
         {
-            Background = darkTheme
-                ? new SolidColorBrush(Color.FromArgb(0xB0, 0x1E, 0x1E, 0x22))
-                : new SolidColorBrush(Color.FromArgb(0xC8, 0xFF, 0xFF, 0xFF)),
-            BorderBrush = darkTheme ? null : new SolidColorBrush(Color.FromArgb(0x50, 0x00, 0x00, 0x00)),
-            BorderThickness = new Thickness(darkTheme ? 0 : 1),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(12, 7, 12, 7),
             HorizontalAlignment = HorizontalAlignment.Left,
@@ -83,12 +94,10 @@ public sealed class OverlayWindow : Window
             Child = new TextBlock
             {
                 Text = "Sound Radar — оверлей активен",
-                Foreground = darkTheme
-                    ? Brushes.White
-                    : new SolidColorBrush(Color.FromRgb(0x1B, 0x1B, 0x1F)),
                 FontSize = 13,
             },
         };
+        SetHintTheme(darkTheme);
 
         var grid = new Grid();
         grid.Children.Add(canvas);
