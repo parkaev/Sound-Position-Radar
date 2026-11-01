@@ -85,6 +85,11 @@ public static class ThemeManager
             B("Brush.Footer", "#202024");
             B("Brush.PopupBg", "#252528");
             B("Brush.PopupBorder", "#3F3F46");
+            B("Brush.StartBg", "#2F6B4F");
+            B("Brush.StopBg", "#7A3B3B");
+            B("Brush.SliderThumb", "#DDDDDD");
+            B("Brush.Scrim", "#70000000");
+            B("Brush.HiddenZoneFill", "#30E57373");
         }
         else
         {
@@ -104,7 +109,7 @@ public static class ThemeManager
             B("Brush.CheckBorder", "#B0B0B8");
             B("Brush.CheckMark", "#0B63C5");
             B("Brush.BulletDot", "#0B63C5");
-            B("Brush.SliderFill", "#0B63C5");
+            B("Brush.SliderFill", "#85B7E6");
             B("Brush.SliderTrack", "#D5D5DA");
             B("Brush.ScrollThumb", "#B0B0B8");
             B("Brush.ScrollTrack", "#E7E7EA");
@@ -121,6 +126,11 @@ public static class ThemeManager
             B("Brush.Footer", "#E9E9EC");
             B("Brush.PopupBg", "#FFFFFF");
             B("Brush.PopupBorder", "#C9C9CF");
+            B("Brush.StartBg", "#2E9E63");
+            B("Brush.StopBg", "#C95252");
+            B("Brush.SliderThumb", "#909096");
+            B("Brush.Scrim", "#59FFFFFF");
+            B("Brush.HiddenZoneFill", "#28D96C6C");
         }
 
         // Системные кисти — их используют дефолтные части шаблонов (дропдаун и т.п.).

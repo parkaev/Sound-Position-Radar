@@ -5,9 +5,10 @@
         Height="700" Width="1280" MinWidth="1040" MinHeight="620"
         Background="{DynamicResource Brush.Window}" Foreground="{DynamicResource Brush.Text}"
         FontFamily="Segoe UI" FontSize="13"
-        Closing="OnWindowClosing">
+        Closing="OnWindowClosing" PreviewKeyDown="OnWindowPreviewKeyDown">
     <!-- Стили контролов — общие, лежат в App.Resources (App.xaml). -->
     <Grid>
+        <Grid x:Name="mainHost">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="430" MinWidth="380" />
             <ColumnDefinition Width="*" MinWidth="300" />
@@ -33,7 +34,8 @@
                             </StackPanel>
                             <CheckBox x:Name="cbIncludeTree" Content="Включая дочерние процессы (лаунчеры)" IsChecked="True" Margin="0,10,0,0" />
                             <CheckBox x:Name="cb360" Content="360°: захват 8 каналов (7.1)" Margin="0,8,0,0"
-                                      ToolTip="Если игра рендерит surround-микс — увидим зад. Если система не отдаёт 8 каналов, автоматический откат на стерео (тогда только 180°)." />
+                                      Checked="On360ModeChanged" Unchecked="On360ModeChanged"
+                                      ToolTip="Если игра рендерит surround-микс — увидим зад (полный круг). Без него радар — фронтальный полукруг. Если система не отдаёт 8 каналов, автоматический откат на стерео." />
                             <TextBlock Text="Совет: в списке сверху процессы, которые сейчас воспроизводят звук."
                                        TextWrapping="Wrap" Foreground="{DynamicResource Brush.Muted}" FontSize="11" Margin="0,8,0,0" />
                         </StackPanel>
@@ -227,7 +229,7 @@
                 </GroupBox>
                 <StackPanel Grid.Column="1" Width="170" Margin="10,0,0,0">
                     <Button x:Name="btnStart" Height="44" Click="OnStartStop"
-                            Background="#2F6B4F" Foreground="White" Content="▶  Старт" FontSize="15" FontWeight="Bold" />
+                            Background="{DynamicResource Brush.StartBg}" Foreground="White" Content="▶  Старт" FontSize="15" FontWeight="Bold" />
                     <Button x:Name="btnOverlayToggle" Height="40" Margin="0,8,0,0" Click="OnOverlayToggle"
                             Content="Оверлей: ВЫКЛ" FontSize="14" FontWeight="SemiBold"
                             ToolTip="Включить/выключить оверлей поверх игр (также глобальный хоткей)" />
@@ -257,5 +259,44 @@
                         ToolTip="Скрывать это напоминание до выхода следующей версии" />
             </StackPanel>
         </Border>
+
+        <!-- Тост оверлея: тематическое уведомление о вкл/выкл, само скрывается -->
+        <Border x:Name="overlayToast" Grid.ColumnSpan="3"
+                HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0"
+                CornerRadius="9" Padding="14,8" Visibility="Collapsed"
+                Background="{DynamicResource Brush.PopupBg}" BorderBrush="{DynamicResource Brush.PopupBorder}"
+                BorderThickness="1" Effect="{StaticResource ShadowPopup}">
+            <TextBlock x:Name="tbOverlayToast" Foreground="{DynamicResource Brush.Text}" />
+        </Border>
+        </Grid>
+
+        <!-- Слой справки: панель поверх размытого основного окна, вместо отдельного окна -->
+        <Grid x:Name="helpOverlay" Visibility="Collapsed" Background="{DynamicResource Brush.Scrim}">
+            <Border Margin="60,36" Background="{DynamicResource Brush.Window}"
+                    BorderBrush="{DynamicResource Brush.CardBorder}" BorderThickness="1" CornerRadius="14"
+                    Effect="{StaticResource ShadowPopup}">
+                <Grid Margin="18,14,18,14">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <Button x:Name="btnHelpClose" DockPanel.Dock="Right" Content="✕" Width="32" Height="26"
+                                Padding="0" Click="OnHelpClose" ToolTip="Закрыть справку (Esc)" />
+                        <TextBlock Text="Справка" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.Text}" />
+                    </DockPanel>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ContentControl x:Name="helpHost" />
+                    </ScrollViewer>
+                    <TextBlock Grid.Row="2" HorizontalAlignment="Right" Margin="0,10,0,0">
+                        <Hyperlink NavigateUri="https://github.com/parkaev" RequestNavigate="OnAuthorNavigate"
+                                   Foreground="{DynamicResource Brush.Accent}"
+                                   ToolTip="Открыть профиль автора на GitHub">parkaev</Hyperlink>
+                    </TextBlock>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

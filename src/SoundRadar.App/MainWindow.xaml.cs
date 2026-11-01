@@ -54,6 +54,8 @@ public partial class MainWindow : Window
     private readonly Rectangle?[] barR = new Rectangle[BandCount];
     private readonly TextBlock?[] barValue = new TextBlock[BandCount];
 
+    private readonly DispatcherTimer toastTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
+
     public MainWindow()
     {
         // Тема подключается до InitializeComponent: кисти нужны шаблонам при первой отрисовке.
@@ -63,6 +65,11 @@ public partial class MainWindow : Window
         uiTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
         uiTimer.Tick += OnUiTick;
         uiTimer.Start();
+        toastTimer.Tick += (_, _) =>
+        {
+            toastTimer.Stop();
+            overlayToast.Visibility = Visibility.Collapsed;
+        };
         hub.EventEnded += e => Dispatcher.BeginInvoke(() => AddEventToList(e));
         Loaded += async (_, _) => await OnLoadedAsync();
     }
@@ -166,6 +173,7 @@ public partial class MainWindow : Window
                 ThemeManager.Apply(this, Config.Theme);
                 RebuildRadar();
                 BuildMeters();
+                UpdateStartButton();
                 UpdateOverlayButtons();
             }
         }
@@ -218,6 +226,7 @@ public partial class MainWindow : Window
         slMinSalience.Value = Config.MinSalienceDb;
         cbIncludeTree.IsChecked = Config.IncludeProcessTree;
         cb360.IsChecked = Config.PreferMultichannel;
+        RebuildRadar();
         slOpacity.Value = Config.OverlayOpacity * 100.0;
         slSize.Value = Config.OverlaySizeDepth;
         slHalfWidth.Value = Config.OverlayHalfWidth;
@@ -342,7 +351,7 @@ public partial class MainWindow : Window
             }
 
             running = true;
-            btnStart.Content = "■  Стоп";
+            UpdateStartButton();
             status = $"Работает: {src.Description}\nФормат: {src.Format}";
             if (src is ProcessLoopbackSource { FellBackToStereo: true })
                 status += "\n⚠ 8 каналов недоступны — стерео, зад не различим (180°).";
@@ -363,7 +372,7 @@ public partial class MainWindow : Window
     private async Task StopAsync()
     {
         running = false;
-        btnStart.Content = "▶  Старт";
+        UpdateStartButton();
         await CleanupAsync();
         tbStatus.Text = "Остановлено.";
         SaveConfig();
@@ -491,6 +500,16 @@ public partial class MainWindow : Window
         else
             OpenOverlay(demo: overlayDemo);
         UpdateOverlayButtons();
+        ShowOverlayToast(overlay is not null ? "Оверлей включен" : "Оверлей выключен");
+    }
+
+    // Тематический тост: одинаково выглядит в тёмной и светлой теме, сам скрывается.
+    private void ShowOverlayToast(string text)
+    {
+        tbOverlayToast.Text = text;
+        overlayToast.Visibility = Visibility.Visible;
+        toastTimer.Stop();
+        toastTimer.Start();
     }
 
     private void OpenOverlay(bool demo)
@@ -795,15 +814,40 @@ public partial class MainWindow : Window
         ThemeManager.Apply(this, Config.Theme);
         RebuildRadar();
         BuildMeters();
+        UpdateStartButton();
         UpdateOverlayButtons();
         SaveConfig();
     }
 
-    private void OnHelpClick(object sender, RoutedEventArgs e)
+    private void OnHelpClick(object sender, RoutedEventArgs e) => ShowHelp();
+
+    // Справка — не отдельное окно, а панель поверх размытого содержимого главного окна.
+    private void ShowHelp()
     {
-        var help = new HelpWindow(Config.Theme) { Owner = this };
-        help.Show();
+        helpHost.Content ??= HelpContent.Build();
+        mainHost.Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 14 };
+        helpOverlay.Visibility = Visibility.Visible;
     }
+
+    private void OnHelpClose(object sender, RoutedEventArgs e) => CloseHelp();
+
+    private void CloseHelp()
+    {
+        helpOverlay.Visibility = Visibility.Collapsed;
+        mainHost.Effect = null;
+    }
+
+    private void OnWindowPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (helpOverlay.Visibility == Visibility.Visible && e.Key == System.Windows.Input.Key.Escape)
+        {
+            CloseHelp();
+            e.Handled = true;
+        }
+    }
+
+    private void OnAuthorNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e) =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
 
     private void OnVersionClick(object sender, System.Windows.Input.MouseButtonEventArgs e) =>
         _ = CheckUpdatesAsync(quiet: false);
@@ -944,47 +988,70 @@ public partial class MainWindow : Window
         var stroke = ThemeBrush("Brush.RadarRing", 0x4A, 0x4A, 0x52);
         var dim = ThemeBrush("Brush.Muted", 0x80, 0x80, 0x80);
 
-        ring = new Ellipse
+        ring = null;
+        rearShade = null;
+        rearLabel = null;
+        if (cb360.IsChecked == true)
         {
-            Width = radius * 2,
-            Height = radius * 2,
-            Stroke = stroke,
-            StrokeThickness = 2,
-        };
-        Canvas.SetLeft(ring, center.X - radius);
-        Canvas.SetTop(ring, center.Y - radius);
-        radar.Children.Add(ring);
-        tickElements.Add(ring);
+            ring = new Ellipse
+            {
+                Width = radius * 2,
+                Height = radius * 2,
+                Stroke = stroke,
+                StrokeThickness = 2,
+            };
+            Canvas.SetLeft(ring, center.X - radius);
+            Canvas.SetTop(ring, center.Y - radius);
+            radar.Children.Add(ring);
+            tickElements.Add(ring);
 
-        // Задняя (нижняя) половина — заливка-подсказка для стерео-режима, скрывается при 360°.
-        var shadePoints = new PointCollection { center };
-        for (var a = 90; a <= 270; a += 10)
-            shadePoints.Add(PointOnCircle(center, radius, a));
-        rearShade = new Polygon
+            // Задняя (нижняя) половина — заливка-подсказка: в 7.1-режиме пока задние
+            // каналы не подтверждены, стерео-микс не различает зад.
+            var shadePoints = new PointCollection { center };
+            for (var a = 90; a <= 270; a += 10)
+                shadePoints.Add(PointOnCircle(center, radius, a));
+            rearShade = new Polygon
+            {
+                Points = shadePoints,
+                Fill = (Brush?)TryFindResource("Brush.RearShade") ?? new SolidColorBrush(Color.FromArgb(0x40, 0, 0, 0)),
+            };
+            radar.Children.Add(rearShade);
+
+            rearLabel = new TextBlock
+            {
+                Text = "зад не различим (стерео-микс)",
+                Foreground = dim,
+                FontSize = 11,
+            };
+            Canvas.SetLeft(rearLabel, center.X - 92);
+            Canvas.SetTop(rearLabel, center.Y + radius * 0.45);
+            radar.Children.Add(rearLabel);
+        }
+        else
         {
-            Points = shadePoints,
-            Fill = (Brush?)TryFindResource("Brush.RearShade") ?? new SolidColorBrush(Color.FromArgb(0x40, 0, 0, 0)),
-        };
-        radar.Children.Add(rearShade);
+            // Без 7.1 — фронтальный полукруг: стерео-микс не различает зад.
+            // Дуга от −90° до +90° через верх, снизу замкнута хордой.
+            var geo = new StreamGeometry();
+            using (var ctx = geo.Open())
+            {
+                ctx.BeginFigure(PointOnCircle(center, radius, -90), false, true);
+                ctx.ArcTo(PointOnCircle(center, radius, 90), new Size(radius, radius), 0, false,
+                    SweepDirection.Clockwise, true, false);
+            }
+            radar.Children.Add(new System.Windows.Shapes.Path { Data = geo, Stroke = stroke, StrokeThickness = 2 });
+        }
 
-        rearLabel = new TextBlock
-        {
-            Text = "зад не различим (стерео-микс)",
-            Foreground = dim,
-            FontSize = 11,
-        };
-        Canvas.SetLeft(rearLabel, center.X - 92);
-        Canvas.SetTop(rearLabel, center.Y + radius * 0.45);
-        radar.Children.Add(rearLabel);
-
-        // Границы зон по числу зон оверлея + градусные подписи центров зон
-        // (совпадают с галочками «Скрытые зоны»: скрытые — красноватые).
+        // Границы зон + градусные подписи центров зон (совпадают с галочками
+        // «Скрытые зоны»: скрытые — красноватые). Без 7.1 — только фронтальные.
         var zoneCount = Math.Max(4, Config.OverlayZones);
         var zoneStep = 360.0 / zoneCount;
         var hidden = ParseHiddenZones(Config.OverlayHiddenZones);
+        bool FrontZone(double a) => cb360.IsChecked == true || Math.Abs(a) <= 90.001;
         for (var k = 0; k < zoneCount; k++)
         {
             var boundary = k * zoneStep + zoneStep / 2.0 - 180.0;
+            if (!FrontZone(boundary))
+                continue;
             var outer = PointOnCircle(center, radius, boundary);
             var inner = PointOnCircle(center, radius - 12, boundary);
             var line = new Line { X1 = outer.X, Y1 = outer.Y, X2 = inner.X, Y2 = inner.Y, Stroke = stroke, StrokeThickness = 1 };
@@ -992,11 +1059,32 @@ public partial class MainWindow : Window
             tickElements.Add(line);
         }
 
+        // Подсветка отключённых зон: полупрозрачная полоса вдоль дуги по ширине зоны.
+        var hiddenFill = ThemeBrush("Brush.HiddenZoneFill", 0xE5, 0x73, 0x73);
+        for (var k = 0; k < zoneCount; k++)
+        {
+            if (!hidden.Contains(k))
+                continue;
+            var zoneCenter = NormalizeAngle(k * zoneStep);
+            if (!FrontZone(zoneCenter))
+                continue;
+            radar.Children.Add(new Polygon
+            {
+                Points = ArcBand(center, radius - 2, radius - 16,
+                    zoneCenter - zoneStep / 2 + 1, zoneCenter + zoneStep / 2 - 1),
+                Fill = hiddenFill,
+            });
+        }
+
         for (var k = 0; k < zoneCount; k++)
         {
             var centerDeg = NormalizeAngle(k * zoneStep);
+            if (!FrontZone(centerDeg))
+                continue;
             var p = PointOnCircle(center, radius - 30, centerDeg);
             var isHidden = hidden.Contains(k);
+            // Подписи на концах хорды (±90° в полукруге) приподнимаем над линией.
+            var topOffset = Math.Abs(Math.Abs(centerDeg) - 90) < 0.5 && cb360.IsChecked != true ? 16 : 7;
             var label = new TextBlock
             {
                 // У нижней точки без знака: +180° и −180° — одна и та же сторона.
@@ -1007,12 +1095,12 @@ public partial class MainWindow : Window
                 FontSize = 10,
             };
             Canvas.SetLeft(label, p.X - 11);
-            Canvas.SetTop(label, p.Y - 7);
+            Canvas.SetTop(label, p.Y - topOffset);
             radar.Children.Add(label);
             tickElements.Add(label);
         }
 
-        // Стрелка «перед» на верхней точке круга.
+        // Стрелка «перед» на верхней точке.
         var frontArrow = new Polygon
         {
             Points = new PointCollection
@@ -1026,21 +1114,39 @@ public partial class MainWindow : Window
         radar.Children.Add(frontArrow);
         tickElements.Add(frontArrow);
 
-        var frontLabel = new TextBlock { Text = "ПЕРЕД", Foreground = dim, FontSize = 11 };
-        Canvas.SetLeft(frontLabel, center.X + 14);
-        Canvas.SetTop(frontLabel, center.Y - radius - 16);
-        radar.Children.Add(frontLabel);
-        tickElements.Add(frontLabel);
-
-        // Зеркальная метка снизу, симметрично «ПЕРЕД».
-        var rearDirection = new TextBlock { Text = "ЗАД", Foreground = dim, FontSize = 11 };
-        Canvas.SetLeft(rearDirection, center.X - 13);
-        Canvas.SetTop(rearDirection, center.Y + radius + 6);
-        radar.Children.Add(rearDirection);
-        tickElements.Add(rearDirection);
-
         wedge = new Polygon { Points = WedgePoints(center, radius, 0, 10), Fill = Brushes.LimeGreen, Opacity = 0 };
         radar.Children.Add(wedge);
+    }
+
+    /// <summary>Замкнутая полоса вдоль дуги от a1° до a2° (внешний и внутренний радиусы).</summary>
+    private static PointCollection ArcBand(Point center, double rOuter, double rInner, double a1, double a2)
+    {
+        var pts = new PointCollection();
+        var steps = Math.Max(2, (int)Math.Ceiling(Math.Abs(a2 - a1) / 6.0));
+        for (var i = 0; i <= steps; i++)
+            pts.Add(PointOnCircle(center, rOuter, a1 + (a2 - a1) * i / steps));
+        for (var i = steps; i >= 0; i--)
+            pts.Add(PointOnCircle(center, rInner, a1 + (a2 - a1) * i / steps));
+        return pts;
+    }
+
+    private void UpdateStartButton()
+    {
+        btnStart.Content = running ? "■  Стоп" : "▶  Старт";
+        btnStart.Background = running
+            ? ThemeBrush("Brush.StopBg", 0x7A, 0x3B, 0x3B)
+            : ThemeBrush("Brush.StartBg", 0x2F, 0x6B, 0x4F);
+        btnStart.Foreground = Brushes.White;
+    }
+
+    private void On360ModeChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || radar is null)
+            return;
+        Config.PreferMultichannel = cb360.IsChecked == true;
+        RebuildRadar();
+        UpdateSurroundMode();
+        SaveConfig();
     }
 
     private void OnUiTick(object? sender, EventArgs e)
@@ -1068,7 +1174,7 @@ public partial class MainWindow : Window
         tbRadarMode.Text = meter switch
         {
             null when cb360.IsChecked != true =>
-                "Захват всего устройства / стерео: показывается фронт 180°.",
+                "Стерео: показывается фронтальный полукруг — зад не различим.",
             null => "Режим (180°/360°) определяется по наличию задних каналов в миксе.",
             { HasRearChannels: true } when surroundDetected =>
                 $"360° активен: многоканальный микс ({meter.Channels} кан.) — перед и зад различимы.",
@@ -1143,8 +1249,11 @@ public partial class MainWindow : Window
 
     private static Color SalienceColor(double salienceDb) => RadarPalette.SalienceColor(salienceDb);
 
-    private static (Point center, double radius) RadarGeometry(double w, double h)
+    private (Point center, double radius) RadarGeometry(double w, double h)
     {
+        // Полукруг (стерео): центр на нижней кромке карточки — дуга занимает всю высоту.
+        if (cb360.IsChecked != true)
+            return (new Point(w / 2, h - 26), Math.Max(40, Math.Min(w / 2 - 30, h - 76)));
         var center = new Point(w / 2, h / 2 + 4);
         var radius = Math.Max(40, Math.Min(w / 2 - 30, h / 2 - 36));
         return (center, radius);

@@ -302,7 +302,7 @@
                                     <Thumb Width="14" Height="14" Focusable="False">
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
-                                                <Ellipse Fill="{DynamicResource Brush.Text}"
+                                                <Ellipse Fill="{DynamicResource Brush.SliderThumb}"
                                                          Stroke="{DynamicResource Brush.Card}" StrokeThickness="2" />
                                             </ControlTemplate>
                                         </Thumb.Template>
