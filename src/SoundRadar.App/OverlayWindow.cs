@@ -16,6 +16,8 @@ namespace SoundRadar.App;
 /// Два пресета: «Дуги» (секторы у краёв с меткой точного азимута) и «Кромка (градиент)»
 /// (свечение вдоль краёв экрана, прозрачно к центру). Непрозрачность, размер, ширина
 /// реакции, скорость затухания, скрытые зоны и цвет настраиваются из тест-окна.
+/// Кроме радара в том же окне рисуется прицел (Crosshair) в центре экрана — независимо,
+/// со своими настройками страницы «Прицел»; радар можно выключить, оставив только прицел.
 ///
 /// Режим <c>--overlay-demo</c>: крутит синтетические метки по всем зонам без аудио.
 /// </summary>
@@ -393,8 +395,9 @@ public sealed class OverlayWindow : Window
         hint.Visibility = RadarVisible ? Visibility.Visible : Visibility.Collapsed;
 
         // Прицел — в том же окне, рисуется независимо от радара и пресета.
+        // Размеры заданы в физических пикселях — делим на DPI монитора с окном.
         if (CrosshairVisible)
-            CrosshairRenderer.Draw(canvas, w, h, Crosshair);
+            CrosshairRenderer.Draw(canvas, w, h, Crosshair, VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
         if (!RadarVisible)
             return;

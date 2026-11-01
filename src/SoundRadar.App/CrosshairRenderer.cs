@@ -27,8 +27,12 @@ public sealed record CrosshairParams
 /// </summary>
 internal static class CrosshairRenderer
 {
-    public static void Draw(Canvas canvas, double w, double h, CrosshairParams p)
+    /// <param name="pixelScale">Масштаб DIP→физические пиксели монитора
+    /// (VisualTreeHelper.GetDpi().PixelsPerDip): «10 px» = 10 физических пикселей
+    /// на любом масштабе монитора, как в превью.</param>
+    public static void Draw(Canvas canvas, double w, double h, CrosshairParams p, double pixelScale = 1.0)
     {
+        var s = pixelScale > 0 ? pixelScale : 1.0;
         var cx = Math.Round(w / 2);
         var cy = Math.Round(h / 2);
 
@@ -37,11 +41,11 @@ internal static class CrosshairRenderer
         var black = Brushes.Black;
 
         var opacity = Math.Clamp(p.Opacity, 0.05, 1.0);
-        var t = Math.Clamp(p.Thickness, 1, 20);
-        var len = Math.Clamp(p.Length, 2, 120);
-        var gap = Math.Clamp(p.Gap, 0, 60);
-        var ot = Math.Clamp(p.OutlineThickness, 0, 4); // 0 — обводка выключена
-        var dot = Math.Clamp(p.DotSize, 1, 40);
+        var t = Math.Clamp(p.Thickness, 1, 20) / s;
+        var len = Math.Clamp(p.Length, 2, 120) / s;
+        var gap = Math.Clamp(p.Gap, 0, 60) / s;
+        var ot = Math.Clamp(p.OutlineThickness, 0, 4) / s; // 0 — обводка выключена
+        var dot = Math.Clamp(p.DotSize, 1, 40) / s;
 
         void Add(FrameworkElement el)
         {

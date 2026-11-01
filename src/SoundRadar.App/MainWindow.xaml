@@ -275,8 +275,10 @@
             </GroupBox>
         </Grid>
 
-        <!-- Тост обновлений: плавает поверх контента, ничего не сдвигает -->
-        <Border x:Name="updateBar" Grid.Column="1" Grid.ColumnSpan="2"
+        </Grid>
+
+        <!-- Тост обновлений: плавает поверх любой страницы, ничего не сдвигает -->
+        <Border x:Name="updateBar" Grid.Row="1"
                 HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,10,0"
                 MaxWidth="500" CornerRadius="10" Padding="14,10" Visibility="Collapsed"
                 Background="{DynamicResource Brush.PopupBg}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1"
@@ -288,7 +290,6 @@
                         ToolTip="Скрывать это напоминание до выхода следующей версии" />
             </StackPanel>
         </Border>
-        </Grid>
 
         <!-- Страница «Прицел»: слева настройки, справа предпросмотр 1:1 и тумблер.
              Рисуется в том же оверлее, что и радар, но работает независимо от него. -->

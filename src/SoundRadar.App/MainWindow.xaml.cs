@@ -511,9 +511,19 @@ public partial class MainWindow : Window
 
     private void ToggleOverlay()
     {
-        if (overlay is { IsDemo: true })
+        if (overlayDemo)
         {
-            CloseOverlay(); // предпросмотр закрывается хоткеем
+            // Запуск в демо-режиме (--overlay-demo): хоткей просто показывает/прячет предпросмотр.
+            if (overlay is not null)
+                CloseOverlay();
+            else
+                OpenOverlay(demo: true);
+        }
+        else if (overlay is { IsDemo: true })
+        {
+            // Предпросмотр закрывается хоткеем; реальный оверлей возвращается, если был включён.
+            CloseOverlay();
+            EnsureOverlayState();
         }
         else
         {
@@ -524,7 +534,7 @@ public partial class MainWindow : Window
         // При включении плашку «активен» показывает сам оверлей (левый верхний угол
         // экрана). При выключении окна оверлея уже нет — уведомление показывает тост
         // на ТОМ ЖЕ мониторе, где был оверлей.
-        if (overlay is null && !radarWanted)
+        if (overlay is null)
             ScreenToast.Show("Sound Radar — оверлей выключен", ThemeManager.IsDark(Config.Theme), Config.OverlayMonitor);
     }
 
@@ -1010,7 +1020,8 @@ public partial class MainWindow : Window
         var h = crossPreview.ActualHeight;
         if (w < 20 || h < 20)
             return;
-        CrosshairRenderer.Draw(crossPreview, w, h, CrosshairParamsFromConfig());
+        CrosshairRenderer.Draw(crossPreview, w, h, CrosshairParamsFromConfig(),
+            VisualTreeHelper.GetDpi(crossPreview).PixelsPerDip);
     }
 
     private void PushCrosshairToControls()
@@ -1105,7 +1116,7 @@ public partial class MainWindow : Window
     {
         Config.OverlayZones = 16;
         Config.OverlayPreset = OverlayWindow.ArcPreset;
-        Config.OverlayColorMode = "Proximity";
+        Config.OverlayColorMode = "Frequency";
         Config.OverlayColorName = "Красный";
         Config.OverlayOpacity = 0.85;
         Config.OverlaySizeDepth = 130.0;
@@ -1200,7 +1211,9 @@ public partial class MainWindow : Window
     private void ShowHelp()
     {
         helpHost.Content ??= HelpContent.Build();
-        mainHost.Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 14 };
+        // Размытие активной страницы: со страницы прицела фон тоже должен размываться.
+        UIElement page = navCrosshair.IsChecked == true ? pageCrosshair : mainHost;
+        page.Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 14 };
         helpOverlay.Visibility = Visibility.Visible;
     }
 
@@ -1210,6 +1223,7 @@ public partial class MainWindow : Window
     {
         helpOverlay.Visibility = Visibility.Collapsed;
         mainHost.Effect = null;
+        pageCrosshair.Effect = null;
     }
 
     private void OnWindowPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
