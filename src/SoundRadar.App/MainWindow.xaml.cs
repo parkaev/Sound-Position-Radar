@@ -961,10 +961,18 @@ public partial class MainWindow : Window
             return;
         // Короткий формат: строка должна влезать в узкую колонку без обрезки.
         lbEvents.Items.Insert(0,
-            $"{e.StartedUtc:HH:mm:ss.fff}  {e.AzimuthDeg,5:F0}°  s{e.SalienceDb,3:F0}  c{e.Confidence:F1}");
+            $"{e.StartedUtc:HH:mm:ss.fff}  {e.AzimuthDeg,5:F0}°  s{e.SalienceDb,3:F0}  c{e.Confidence:F1}  {TypeTag(e.Type)}");
         if (lbEvents.Items.Count > 200)
             lbEvents.Items.RemoveAt(lbEvents.Items.Count - 1);
     }
+
+    private static string TypeTag(SoundEventType t) => t switch
+    {
+        SoundEventType.Shot => "ВЫСТР",
+        SoundEventType.Footsteps => "ШАГИ",
+        SoundEventType.Click => "ЩЕЛЧ",
+        _ => "·",
+    };
 
     // ---- радар -----------------------------------------------------------------------------
 

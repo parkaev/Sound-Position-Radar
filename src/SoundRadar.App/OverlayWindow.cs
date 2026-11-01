@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using SoundRadar.Core.Events;
@@ -59,6 +60,7 @@ public sealed class OverlayWindow : Window
         public double Salience;
         public double Opacity = 1;
         public int Age;
+        public string TypeLabel = "";       // подпись типа («выстрел» и т.п.), пусто — не рисуется
     }
 
     public OverlayWindow(EventHub? hub, bool demo, bool darkTheme)
@@ -210,6 +212,15 @@ public sealed class OverlayWindow : Window
             hint.Opacity = Math.Max(0, hint.Opacity - 0.01);
     }
 
+    /// <summary>Русская подпись типа; Unknown — пусто (маркер без подписи).</summary>
+    private static string TypeText(SoundEventType type) => type switch
+    {
+        SoundEventType.Shot => "выстрел",
+        SoundEventType.Footsteps => "шаги",
+        SoundEventType.Click => "пуля",
+        _ => "",
+    };
+
     private bool IsAlive(Entry entry) =>
         demo ? entry.Age < 26 : EntryActiveInHub(entry);
 
@@ -241,9 +252,10 @@ public sealed class OverlayWindow : Window
                 entries.RemoveAt(0);
         }
 
-        // Пока событие живо — угол уточняется и метка яркая.
+        // Пока событие живо — угол уточняется, метка яркая, тип обновляется классификатором.
         entry.Azimuth = ev.AzimuthDeg;
         entry.Salience = ev.SalienceDb;
+        entry.TypeLabel = TypeText(ev.Type);
         entry.Opacity = 1;
     }
 
@@ -283,11 +295,13 @@ public sealed class OverlayWindow : Window
         if (demoTick % 30 == 1)
         {
             var step = 360.0 / Zones;
+            var demoTypes = new[] { SoundEventType.Shot, SoundEventType.Footsteps, SoundEventType.Click };
             entries.Add(new Entry
             {
                 Id = Guid.NewGuid(),
                 Azimuth = (demoTick / 30 % Zones) * step, // все зоны по кругу
                 Salience = 15 + 6 * ((demoTick / 30) % 3),
+                TypeLabel = TypeText(demoTypes[demoTick / 30 % 3]),
             });
             while (entries.Count > MaxEntries)
                 entries.RemoveAt(0);
@@ -374,6 +388,9 @@ public sealed class OverlayWindow : Window
 
                 canvas.Children.Add(new Path { Data = new PathGeometry(new[] { figure }), Fill = brush });
             }
+
+            // Подпись типа — сразу внутри светящейся кромки.
+            AddTypeLabel(entry, cx, cy, rxIn, ryIn);
         }
     }
 
@@ -406,7 +423,30 @@ public sealed class OverlayWindow : Window
             var zoneSpan = Math.Max(6.0, Math.Min(step, 2.0 * HalfWidthDeg));
             canvas.Children.Add(BuildArc(w, h, zoneCenter - zoneSpan / 2, zoneCenter + zoneSpan / 2, 22, color, 0.45 * entry.Opacity * OpacityScale));
             canvas.Children.Add(BuildArc(w, h, entry.DisplayedAzimuth - 4, entry.DisplayedAzimuth + 4, 9, color, entry.Opacity * OpacityScale));
+            AddTypeLabel(entry, w / 2, h / 2, rx, ry);
         }
+    }
+
+    /// <summary>Подпись типа звука у маркера (чуть внутрь от дуги/кромки).</summary>
+    private void AddTypeLabel(Entry entry, double cx, double cy, double rx, double ry)
+    {
+        if (entry.TypeLabel.Length == 0 || entry.Opacity * OpacityScale < 0.15)
+            return;
+        var p = PointOnRect(cx, cy, rx, ry, entry.DisplayedAzimuth);
+        var lp = new Point(p.X + (cx - p.X) * 0.10, p.Y + (cy - p.Y) * 0.10);
+        var tb = new TextBlock
+        {
+            Text = entry.TypeLabel,
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brushes.White,
+            Opacity = Math.Clamp(entry.Opacity * OpacityScale, 0, 1),
+            Effect = new DropShadowEffect { BlurRadius = 4, ShadowDepth = 0, Opacity = 0.9 },
+        };
+        tb.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Canvas.SetLeft(tb, lp.X - tb.DesiredSize.Width / 2);
+        Canvas.SetTop(tb, lp.Y - tb.DesiredSize.Height / 2);
+        canvas.Children.Add(tb);
     }
 
     /// <summary>Дуга вдоль эллипса у краёв экрана от fromDeg до toDeg (0° = перед, по часовой).</summary>
