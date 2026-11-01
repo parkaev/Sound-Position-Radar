@@ -237,6 +237,7 @@ public partial class MainWindow : Window
         SetIntText(tbHalfWidthValue, (int)slHalfWidth.Value);
         SetIntText(tbFadeValue, (int)slFade.Value);
         cbShowLog.IsChecked = Config.ShowEventLog;
+        cbDimZones.IsChecked = Config.OverlayDimZones;
         ApplyLogVisibility();
         RebuildHiddenZonesPanel();
         foreach (var item in cbTheme.Items.Cast<ComboBoxItem>())
@@ -526,6 +527,7 @@ public partial class MainWindow : Window
         {
             Zones = Config.OverlayZones,
             HiddenZones = Config.OverlayHiddenZones,
+            DimZones = Config.OverlayDimZones,
             Preset = Config.OverlayPreset,
             ColorMode = Config.OverlayColorMode,
             ColorName = Config.OverlayColorName,
@@ -1153,6 +1155,16 @@ public partial class MainWindow : Window
         Config.PreferMultichannel = cb360.IsChecked == true;
         RebuildRadar();
         UpdateSurroundMode();
+        SaveConfig();
+    }
+
+    private void OnDimZonesChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+        Config.OverlayDimZones = cbDimZones.IsChecked == true;
+        if (overlay is not null)
+            overlay.DimZones = Config.OverlayDimZones;
         SaveConfig();
     }
 

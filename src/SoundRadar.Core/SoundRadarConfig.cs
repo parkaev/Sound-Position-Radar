@@ -86,6 +86,9 @@ public sealed class SoundRadarConfig
     /// <summary>Число зон по кругу в оверлее (8/12/16/24): ширина подсвечиваемого сектора = 360/N.</summary>
     public int OverlayZones { get; set; } = 16;
 
+    /// <summary>Скрытые зоны показывают приглушённый маркер (видно, что звучите), а не скрываются полностью.</summary>
+    public bool OverlayDimZones { get; set; } = true;
+
     [JsonIgnore]
     public bool IsProcessSource => string.Equals(SourceType, "Process", StringComparison.OrdinalIgnoreCase);
 

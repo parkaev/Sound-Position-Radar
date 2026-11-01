@@ -146,6 +146,9 @@ public sealed class OverlayWindow : Window
                 .Where(v => v >= 0));
     }
 
+    /// <summary>Скрытые зоны приглушаются (≈35% яркости) вместо полного скрытия.</summary>
+    public bool DimZones { get; set; } = true;
+
     /// <summary>Режим цвета: "Frequency" (по частотам: бас — тёмно-красный, верха — зелёный)
     /// или "Fixed" (постоянный оттенок).</summary>
     public string ColorMode { get; set; } = "Frequency";
@@ -224,8 +227,9 @@ public sealed class OverlayWindow : Window
         if (ev is null || ev.EndedUtc is not null)
             return;
 
-        // Скрытая зона — событие не показываем и слот не занимаем.
-        if (IsHidden(ev.AzimuthDeg))
+        var hidden = IsHidden(ev.AzimuthDeg);
+        // Скрытая зона без приглушения — событие не показываем и слот не занимаем.
+        if (hidden && !DimZones)
         {
             entries.RemoveAll(x => x.Id == ev.Id);
             return;
@@ -240,11 +244,11 @@ public sealed class OverlayWindow : Window
                 entries.RemoveAt(0);
         }
 
-        // Пока событие живо — угол уточняется и метка яркая.
+        // Пока событие живо — угол уточняется и метка яркая; приглушённая зона — тусклая.
         entry.Azimuth = ev.AzimuthDeg;
         entry.Salience = ev.SalienceDb;
         entry.DominantBand = DominantBand(ev.BandSalienceDb);
-        entry.Opacity = 1;
+        entry.Opacity = hidden ? 0.35 : 1.0;
     }
 
     /// <summary>Самая громкая полоса события: 0 = бас … 4 = 6к+.</summary>
@@ -344,9 +348,10 @@ public sealed class OverlayWindow : Window
 
         foreach (var entry in entries)
         {
-            if (IsHidden(entry.DisplayedAzimuth))
+            if (IsHidden(entry.DisplayedAzimuth) && !DimZones)
                 continue;
             var color = EntryColor(entry);
+            var opacity = EntryOpacity(entry); // уже с масштабом непрозрачности и приглушением
 
             for (var i = 0; i < steps; i++)
             {
@@ -354,7 +359,7 @@ public sealed class OverlayWindow : Window
                 var a1 = a0 + 2.0 * halfWidth / steps;
                 var mid = (a0 + a1) / 2.0;
                 var alongFalloff = Math.Pow(Math.Cos(Math.PI / 2.0 * (mid - entry.DisplayedAzimuth) / halfWidth), 2);
-                var alpha = 0.8 * alongFalloff * entry.Opacity * OpacityScale;
+                var alpha = 0.8 * alongFalloff * opacity;
                 if (alpha < 0.01)
                     continue;
 
@@ -398,6 +403,10 @@ public sealed class OverlayWindow : Window
     /// Пресет «Дуги»: дуга зоны + тонкая метка точного азимута. Без сетки зон и подписей —
     /// прод-минимализм.
     /// </summary>
+    /// <summary>Итоговая яркость маркера: приглушённые скрытые зоны — 35%.</summary>
+    private double EntryOpacity(Entry entry) =>
+        entry.Opacity * OpacityScale * (IsHidden(entry.DisplayedAzimuth) && DimZones ? 0.35 : 1.0);
+
     private void RenderArcs(double w, double h)
     {
         var cx = w / 2;
@@ -410,13 +419,13 @@ public sealed class OverlayWindow : Window
 
         foreach (var entry in entries)
         {
-            if (IsHidden(entry.DisplayedAzimuth))
+            if (IsHidden(entry.DisplayedAzimuth) && !DimZones)
                 continue;
             var color = EntryColor(entry);
             var zoneCenter = Math.Round(entry.DisplayedAzimuth / step) * step;
             var zoneSpan = Math.Max(6.0, Math.Min(step, 2.0 * HalfWidthDeg));
-            canvas.Children.Add(BuildArc(w, h, zoneCenter - zoneSpan / 2, zoneCenter + zoneSpan / 2, 22, color, 0.45 * entry.Opacity * OpacityScale));
-            canvas.Children.Add(BuildArc(w, h, entry.DisplayedAzimuth - 4, entry.DisplayedAzimuth + 4, 9, color, entry.Opacity * OpacityScale));
+            canvas.Children.Add(BuildArc(w, h, zoneCenter - zoneSpan / 2, zoneCenter + zoneSpan / 2, 22, color, 0.45 * EntryOpacity(entry)));
+            canvas.Children.Add(BuildArc(w, h, entry.DisplayedAzimuth - 4, entry.DisplayedAzimuth + 4, 9, color, EntryOpacity(entry)));
         }
     }
 
