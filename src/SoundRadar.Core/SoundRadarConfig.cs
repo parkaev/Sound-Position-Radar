@@ -113,10 +113,7 @@ public sealed class SoundRadarConfig
     /// <summary>Размер центральной точки, px (для стиля «Точка» — размер всего прицела).</summary>
     public double CrosshairDotSize { get; set; } = 2.0;
 
-    /// <summary>Чёрная обводка линий — прицел виден и на светлом фоне.</summary>
-    public bool CrosshairOutline { get; set; } = true;
-
-    /// <summary>Толщина обводки, px (с каждой стороны).</summary>
+    /// <summary>Толщина чёрной обводки, px (с каждой стороны); 0 — обводка выключена.</summary>
     public double CrosshairOutlineThickness { get; set; } = 1.0;
 
     /// <summary>Цвет прицела в формате #RRGGBB.</summary>

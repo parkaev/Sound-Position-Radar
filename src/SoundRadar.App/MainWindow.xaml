@@ -11,6 +11,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Навигация по страницам: «Радар» (детектор + оверлей радара) и «Прицел». -->
@@ -205,30 +206,6 @@
                     </GroupBox>
                 </StackPanel>
             </ScrollViewer>
-
-            <!-- Мини-футер: тема, справка, версия -->
-            <Border Grid.Row="1" Margin="0,10,0,0" Background="{DynamicResource Brush.Card}"
-                    BorderBrush="{DynamicResource Brush.CardBorder}" BorderThickness="1" CornerRadius="10" Padding="10,7">
-                <DockPanel LastChildFill="False">
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
-                        <TextBlock Text="Тема:" VerticalAlignment="Center" Margin="2,0,6,0"
-                                   Foreground="{DynamicResource Brush.Muted}" />
-                        <ComboBox x:Name="cbTheme" Width="110" SelectionChanged="OnThemeChanged">
-                            <ComboBoxItem>Системная</ComboBoxItem>
-                            <ComboBoxItem>Тёмная</ComboBoxItem>
-                            <ComboBoxItem>Светлая</ComboBoxItem>
-                        </ComboBox>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
-                        <Button x:Name="btnHelp" Content="Справка" Padding="9,4" Click="OnHelpClick"
-                                ToolTip="Описание всех настроек" />
-                        <TextBlock x:Name="tbVersion" Margin="12,2,2,0" VerticalAlignment="Center" Cursor="Hand"
-                                   MouseLeftButtonUp="OnVersionClick" Foreground="{DynamicResource Brush.Accent}"
-                                   TextDecorations="Underline" Text="v0.0.0"
-                                   ToolTip="Проверить обновления" />
-                    </StackPanel>
-                </DockPanel>
-            </Border>
         </Grid>
 
         <!-- Колонка 2: радар + полосы + кнопки пуска -->
@@ -315,9 +292,6 @@
                                 <CheckBox x:Name="cbCrossDot" Content="Точка в центре" Margin="0,8,0,0"
                                           Checked="OnCrossCheckChanged" Unchecked="OnCrossCheckChanged"
                                           ToolTip="Маленькая точка в центре — дополнение к кресту, кругу или X" />
-                                <CheckBox x:Name="cbCrossOutline" Content="Чёрная обводка" IsChecked="True" Margin="0,4,0,0"
-                                          Checked="OnCrossCheckChanged" Unchecked="OnCrossCheckChanged"
-                                          ToolTip="Чёрная подложка вокруг линий: прицел виден и на светлом фоне" />
                             </StackPanel>
                         </GroupBox>
 
@@ -358,8 +332,8 @@
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                     <TextBlock Text="Обводка, px:" Width="112" VerticalAlignment="Center" FontSize="12"
-                                               ToolTip="Толщина чёрной обводки с каждой стороны линии" />
-                                    <Slider x:Name="slCrossOutline" Minimum="1" Maximum="4" Value="1" Width="120"
+                                               ToolTip="Толщина чёрной обводки с каждой стороны линии; 0 — обводка выключена" />
+                                    <Slider x:Name="slCrossOutline" Minimum="0" Maximum="4" Value="1" Width="120"
                                             IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnCrosshairSliderChanged" />
                                     <TextBox x:Name="tbCrossOutlineValue" Width="52" Margin="6,0,0,0" TextChanged="OnCrosshairTextChanged"
                                              PreviewTextInput="NumericOnly" MaxLength="1" />
@@ -377,6 +351,7 @@
                                              TextChanged="OnCrossHexChanged" PreviewTextInput="HexOnly"
                                              ToolTip="Цвет в формате #RRGGBB" />
                                 </StackPanel>
+                                <WrapPanel x:Name="crossPalette" Margin="0,8,0,0" />
                                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                     <TextBlock Text="Красный (R):" Width="112" VerticalAlignment="Center" FontSize="12" />
                                     <Slider x:Name="slCrossR" Minimum="0" Maximum="255" Value="0" Width="120"
@@ -443,6 +418,31 @@
                         ToolTip="Включить/выключить прицел поверх игр (можно назначить глобальный хоткей)" />
             </Grid>
         </Grid>
+
+        <!-- Общий футер (обе страницы): тема, справка, версия -->
+        <Border Grid.Row="2" HorizontalAlignment="Left" Width="414" Margin="20,0,0,10"
+                Background="{DynamicResource Brush.Card}"
+                BorderBrush="{DynamicResource Brush.CardBorder}" BorderThickness="1" CornerRadius="10" Padding="10,7">
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <TextBlock Text="Тема:" VerticalAlignment="Center" Margin="2,0,6,0"
+                               Foreground="{DynamicResource Brush.Muted}" />
+                    <ComboBox x:Name="cbTheme" Width="110" SelectionChanged="OnThemeChanged">
+                        <ComboBoxItem>Системная</ComboBoxItem>
+                        <ComboBoxItem>Тёмная</ComboBoxItem>
+                        <ComboBoxItem>Светлая</ComboBoxItem>
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <Button x:Name="btnHelp" Content="Справка" Padding="9,4" Click="OnHelpClick"
+                            ToolTip="Описание всех настроек" />
+                    <TextBlock x:Name="tbVersion" Margin="12,2,2,0" VerticalAlignment="Center" Cursor="Hand"
+                               MouseLeftButtonUp="OnVersionClick" Foreground="{DynamicResource Brush.Accent}"
+                               TextDecorations="Underline" Text="v0.0.0"
+                               ToolTip="Проверить обновления" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
 
         <!-- Слой справки: панель поверх размытого основного окна, вместо отдельного окна -->
         <Grid x:Name="helpOverlay" Grid.Row="0" Grid.RowSpan="2" Visibility="Collapsed" Background="{DynamicResource Brush.Scrim}">

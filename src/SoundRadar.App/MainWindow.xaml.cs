@@ -62,6 +62,7 @@ public partial class MainWindow : Window
         ThemeManager.Apply(this, Config.Theme);
         InitializeComponent();
         BuildMeters();
+        BuildCrosshairPalette();
         radarWanted = Config.OverlayEnabled;
         crosshairWanted = Config.CrosshairEnabled;
         uiTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
@@ -837,7 +838,6 @@ public partial class MainWindow : Window
         Gap = Config.CrosshairGap,
         CenterDot = Config.CrosshairDot,
         DotSize = Config.CrosshairDotSize,
-        Outline = Config.CrosshairOutline,
         OutlineThickness = Config.CrosshairOutlineThickness,
         Color = TryParseHexColor(Config.CrosshairColor, out var c) ? c : Color.FromRgb(0, 255, 0),
         Opacity = Config.CrosshairOpacity,
@@ -874,10 +874,9 @@ public partial class MainWindow : Window
 
     private void OnCrossCheckChanged(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || cbCrossDot is null || cbCrossOutline is null)
+        if (!IsLoaded || cbCrossDot is null)
             return;
         Config.CrosshairDot = cbCrossDot.IsChecked == true;
-        Config.CrosshairOutline = cbCrossOutline.IsChecked == true;
         ApplyCrosshairAppearance();
         DrawCrosshairPreview();
         SaveConfig();
@@ -951,6 +950,51 @@ public partial class MainWindow : Window
     private void HexOnly(object sender, TextCompositionEventArgs e) =>
         e.Handled = e.Text.Length > 0 && !e.Text.All(c => Uri.IsHexDigit(c) || c == '#');
 
+    /// <summary>Палитра готовых цветов (как свотчи в Photoshop): клик ставит цвет прицела,
+    /// точные значения — слайдерами RGB или hex-кодом.</summary>
+    private void BuildCrosshairPalette()
+    {
+        static Color H(string hex) => (Color)ColorConverter.ConvertFromString(hex);
+        var palette = new[]
+        {
+            // оттенки серого
+            "#FFFFFF", "#C0C0C0", "#808080", "#404040", "#000000",
+            // красные и оранжево-жёлтые
+            "#FF6666", "#FF0000", "#CC0000", "#990000", "#FF9900", "#FF6600", "#FFCC00", "#FFFF00",
+            // зелёные
+            "#66FF66", "#00FF00", "#33CC33", "#008000", "#006600",
+            // голубые и синие
+            "#66FFFF", "#00FFFF", "#00CCFF", "#0099FF", "#0000FF", "#3333CC", "#6600FF", "#9900FF",
+            // фиолетово-розовые и коричневые
+            "#FF66CC", "#FF00FF", "#FF99CC", "#CC9966", "#996633",
+        }.Select(H).ToArray();
+        crossPalette.Children.Clear();
+        foreach (var c in palette)
+        {
+            var sw = new Border
+            {
+                Width = 22,
+                Height = 22,
+                CornerRadius = new CornerRadius(4),
+                Background = new SolidColorBrush(c),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(0x50, 0, 0, 0)),
+                BorderThickness = new Thickness(1),
+                Margin = new Thickness(0, 0, 4, 4),
+                Cursor = Cursors.Hand,
+                ToolTip = $"#{c.R:X2}{c.G:X2}{c.B:X2}",
+            };
+            sw.MouseLeftButtonUp += (_, _) =>
+            {
+                if (!IsLoaded || slCrossR is null)
+                    return;
+                slCrossR.Value = c.R;
+                slCrossG.Value = c.G;
+                slCrossB.Value = c.B; // дальше цепочка: слайдер → hex → конфиг → свотч → предпросмотр
+            };
+            crossPalette.Children.Add(sw);
+        }
+    }
+
     private static bool TryParseHexColor(string? s, out Color color)
     {
         color = Color.FromRgb(0, 255, 0);
@@ -998,7 +1042,6 @@ public partial class MainWindow : Window
         SetIntText(tbCrossOutlineValue, (int)slCrossOutline.Value);
         SetIntText(tbCrossOpacityValue, (int)slCrossOpacity.Value);
         cbCrossDot.IsChecked = Config.CrosshairDot;
-        cbCrossOutline.IsChecked = Config.CrosshairOutline;
         cbCrossStyle.SelectedItem = cbCrossStyle.Items.Cast<ComboBoxItem>()
             .FirstOrDefault(i => string.Equals(i.Tag?.ToString(), Config.CrosshairStyle, StringComparison.Ordinal));
         var color = TryParseHexColor(Config.CrosshairColor, out var c) ? c : Color.FromRgb(0, 255, 0);
@@ -1020,7 +1063,6 @@ public partial class MainWindow : Window
         Config.CrosshairGap = 3;
         Config.CrosshairDot = false;
         Config.CrosshairDotSize = 2;
-        Config.CrosshairOutline = true;
         Config.CrosshairOutlineThickness = 1;
         Config.CrosshairColor = "#00FF00";
         Config.CrosshairOpacity = 1.0;

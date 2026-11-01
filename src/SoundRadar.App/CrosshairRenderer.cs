@@ -14,7 +14,7 @@ public sealed record CrosshairParams
     public double Gap { get; init; } = 3;
     public bool CenterDot { get; init; }
     public double DotSize { get; init; } = 2;
-    public bool Outline { get; init; } = true;
+    /// <summary>Толщина чёрной обводки с каждой стороны; 0 — без обводки.</summary>
     public double OutlineThickness { get; init; } = 1;
     public Color Color { get; init; } = Color.FromRgb(0, 255, 0);
     public double Opacity { get; init; } = 1;
@@ -40,7 +40,7 @@ internal static class CrosshairRenderer
         var t = Math.Clamp(p.Thickness, 1, 20);
         var len = Math.Clamp(p.Length, 2, 120);
         var gap = Math.Clamp(p.Gap, 0, 60);
-        var ot = p.Outline ? Math.Clamp(p.OutlineThickness, 0.5, 4) : 0;
+        var ot = Math.Clamp(p.OutlineThickness, 0, 4); // 0 — обводка выключена
         var dot = Math.Clamp(p.DotSize, 1, 40);
 
         void Add(FrameworkElement el)
