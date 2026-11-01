@@ -35,6 +35,9 @@ internal static class ScreenToast
                 ShowActivated = false, // не крадём фокус из игры
                 IsHitTestVisible = false,
                 Topmost = true,
+                // Окно размером с плашку: без этого безрамочное окно растягивается на экран.
+                SizeToContent = SizeToContent.WidthAndHeight,
+                MaxWidth = 420,
                 Left = 16,
                 Top = 16,
                 Content = new Border

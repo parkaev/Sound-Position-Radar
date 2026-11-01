@@ -43,17 +43,34 @@ public class SoundClassifierTests
     [Fact]
     public void Footsteps_ClassifiesFootsteps()
     {
-        // Пик в середине (0.5–2к/2–6к), басы и верха отстают, событие короткое.
-        var (type, conf) = SoundClassifier.Classify(new[] { 12.0, 10.0, 20.0, 19.0, 8.0 }, 600);
+        // Реальное событие шагов (бетон): «долина» в 0.5–2к, пик в 2–6к, вч рядом.
+        var (type, conf) = SoundClassifier.Classify(new[] { 18.4, 18.2, 14.6, 25.0, 21.9 }, 5000);
         Assert.Equal(SoundEventType.Footsteps, type);
         Assert.Equal(0.6, conf);
     }
 
     [Fact]
-    public void FootstepsShape_LongDuration_Unknown()
+    public void ContinuousWalking_LongEvent_StillFootsteps()
     {
-        var (type, _) = SoundClassifier.Classify(new[] { 12.0, 10.0, 20.0, 19.0, 8.0 }, 1500);
-        Assert.Equal(SoundEventType.Unknown, type);
+        // Непрерывная ходьба склеивается в длинное событие — длительность не ограничиваем.
+        var (type, _) = SoundClassifier.Classify(new[] { 17.2, 13.6, 14.4, 24.2, 25.0 }, 5000);
+        Assert.Equal(SoundEventType.Footsteps, type);
+    }
+
+    [Fact]
+    public void FootstepBassThump_ClassifiesFootsteps()
+    {
+        // Бетонный удар ступни: пик в басах/низкой середине, вч не выражены.
+        var (type, _) = SoundClassifier.Classify(new[] { 19.9, 17.6, 17.6, 24.2, 24.4 }, 5000);
+        Assert.Equal(SoundEventType.Footsteps, type);
+    }
+
+    [Fact]
+    public void BassShot_DeepHighs_StillShot()
+    {
+        // CZ-550: как шаги с басовым ударом, но 6к+ отстаёт на 19 дБ — выстрел.
+        var (type, _) = SoundClassifier.Classify(new[] { 37.0, 30.3, 26.9, 25.6, 17.9 }, 4395);
+        Assert.Equal(SoundEventType.Shot, type);
     }
 
     [Fact]
