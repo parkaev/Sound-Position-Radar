@@ -4,6 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows10.0.19041</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>SoundRadar</AssemblyName>
     <Version>0.2.6</Version>
     <Nullable>enable</Nullable>
@@ -13,6 +14,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SoundRadar.Core\SoundRadar.Core.csproj" />
+  </ItemGroup>
+
+  <!-- WinForms нужен только для Screen.AllScreens (селектор монитора); убираем глобальные
+       using-и, чтобы System.Windows.Forms/Drawing не конфликтовали с WPF-типами. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
   </ItemGroup>
 
 </Project>

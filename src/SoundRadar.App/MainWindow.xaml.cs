@@ -238,6 +238,17 @@ public partial class MainWindow : Window
         SetIntText(tbFadeValue, (int)slFade.Value);
         cbShowLog.IsChecked = Config.ShowEventLog;
         cbDimZones.IsChecked = Config.OverlayDimZones;
+        var screens = System.Windows.Forms.Screen.AllScreens;
+        panelMonitor.Visibility = screens.Length > 1 ? Visibility.Visible : Visibility.Collapsed;
+        cbMonitor.Items.Clear();
+        for (var i = 0; i < screens.Length; i++)
+        {
+            var b = screens[i].Bounds;
+            cbMonitor.Items.Add(screens[i].Primary
+                ? $"Основной ({b.Width}×{b.Height})"
+                : $"Монитор {i + 1} ({b.Width}×{b.Height})");
+        }
+        cbMonitor.SelectedIndex = Math.Clamp(Config.OverlayMonitor, 0, screens.Length - 1);
         ApplyLogVisibility();
         RebuildHiddenZonesPanel();
         foreach (var item in cbTheme.Items.Cast<ComboBoxItem>())
@@ -528,6 +539,7 @@ public partial class MainWindow : Window
             Zones = Config.OverlayZones,
             HiddenZones = Config.OverlayHiddenZones,
             DimZones = Config.OverlayDimZones,
+            MonitorIndex = Config.OverlayMonitor,
             Preset = Config.OverlayPreset,
             ColorMode = Config.OverlayColorMode,
             ColorName = Config.OverlayColorName,
@@ -1165,6 +1177,19 @@ public partial class MainWindow : Window
         Config.OverlayDimZones = cbDimZones.IsChecked == true;
         if (overlay is not null)
             overlay.DimZones = Config.OverlayDimZones;
+        SaveConfig();
+    }
+
+    private void OnMonitorChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || cbMonitor.SelectedIndex < 0)
+            return;
+        Config.OverlayMonitor = cbMonitor.SelectedIndex;
+        if (overlay is not null)
+        {
+            overlay.MonitorIndex = Config.OverlayMonitor;
+            overlay.PositionOnMonitor();
+        }
         SaveConfig();
     }
 

@@ -76,12 +76,7 @@ public sealed class OverlayWindow : Window
         Focusable = false;
         Topmost = true;
         Title = "Sound Radar Overlay";
-        // Только основной монитор: в координатах WPF его левый верхний угол — (0,0),
-        // а PrimaryScreenWidth/Height — его размер в DIP (масштаб DPI учтён).
-        Left = 0;
-        Top = 0;
-        Width = SystemParameters.PrimaryScreenWidth;
-        Height = SystemParameters.PrimaryScreenHeight;
+        PositionOnMonitor();
 
         // Уведомление «активен» в левом верхнем углу экрана — в цветах темы приложения.
         hint = new Border
@@ -211,6 +206,50 @@ public sealed class OverlayWindow : Window
         if (hint.Opacity > 0)
             hint.Opacity = Math.Max(0, hint.Opacity - 0.01);
     }
+
+    /// <summary>Индекс монитора (0 = основной). При смене — RepositionToMonitor().</summary>
+    public int MonitorIndex { get; set; }
+
+    /// <summary>Разместить окно на выбранном мониторе (физические пиксели экрана / DPI монитора).
+    /// Точный для мониторов с одинаковым масштабом; для смешанного DPI — приблизительно.</summary>
+    public void PositionOnMonitor()
+    {
+        var screens = System.Windows.Forms.Screen.AllScreens;
+        var screen = screens[Math.Clamp(MonitorIndex, 0, screens.Length - 1)];
+        var b = screen.Bounds;
+        var scale = MonitorScale(b) / 96.0;
+        Left = b.Left / scale;
+        Top = b.Top / scale;
+        Width = b.Width / scale;
+        Height = b.Height / scale;
+    }
+
+    /// <summary>Эффективный DPI монитора (MDT_EFFECTIVE_DPI), 96 = 100%.</summary>
+    private static uint MonitorScale(System.Drawing.Rectangle bounds)
+    {
+        try
+        {
+            var pt = new NativePoint { X = bounds.Left + bounds.Width / 2, Y = bounds.Top + bounds.Height / 2 };
+            var hMonitor = MonitorFromPoint(pt, MonitorDefaultToNearest);
+            if (GetDpiForMonitor(hMonitor, EffectiveDpi, out var dpiX, out _) == 0 && dpiX > 0)
+                return dpiX;
+        }
+        catch
+        {
+            // Нет shcore/старая система — считаем 96 (100%).
+        }
+        return 96;
+    }
+
+    private struct NativePoint { public int X, Y; }
+    private const uint MonitorDefaultToNearest = 2;
+    private const int EffectiveDpi = 0;
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromPoint(NativePoint pt, uint flags);
+
+    [DllImport("shcore.dll")]
+    private static extern int GetDpiForMonitor(IntPtr hMonitor, int dpiType, out uint dpiX, out uint dpiY);
 
     private bool IsAlive(Entry entry) =>
         demo ? entry.Age < 26 : EntryActiveInHub(entry);

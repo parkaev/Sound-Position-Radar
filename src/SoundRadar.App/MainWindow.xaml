@@ -108,6 +108,11 @@
                                     <ComboBoxItem>24</ComboBoxItem>
                                 </ComboBox>
                             </StackPanel>
+                            <StackPanel x:Name="panelMonitor" Orientation="Horizontal" Margin="0,8,0,0" Visibility="Collapsed">
+                                <TextBlock Text="Монитор:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <ComboBox x:Name="cbMonitor" Width="190" SelectionChanged="OnMonitorChanged"
+                                          ToolTip="На каком мониторе показывать оверлей (по умолчанию — основной)" />
+                            </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                 <TextBlock Text="Цвет:" VerticalAlignment="Center" Margin="0,0,8,0" />
                                 <ComboBox x:Name="cbColorMode" Width="200" SelectionChanged="OnColorModeChanged"

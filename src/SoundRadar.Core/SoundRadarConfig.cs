@@ -89,6 +89,9 @@ public sealed class SoundRadarConfig
     /// <summary>Скрытые зоны показывают приглушённый маркер (видно, что звучите), а не скрываются полностью.</summary>
     public bool OverlayDimZones { get; set; } = true;
 
+    /// <summary>Индекс монитора для оверлея (0 = основной). Список — System.Windows.Forms.Screen.AllScreens.</summary>
+    public int OverlayMonitor { get; set; } = 0;
+
     [JsonIgnore]
     public bool IsProcessSource => string.Equals(SourceType, "Process", StringComparison.OrdinalIgnoreCase);
 
