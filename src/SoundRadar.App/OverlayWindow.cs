@@ -45,7 +45,7 @@ public sealed class OverlayWindow : Window
         public int Age;
     }
 
-    public OverlayWindow(EventHub? hub, bool demo)
+    public OverlayWindow(EventHub? hub, bool demo, bool darkTheme)
     {
         this.hub = hub;
         this.demo = demo;
@@ -67,18 +67,25 @@ public sealed class OverlayWindow : Window
         Width = SystemParameters.PrimaryScreenWidth;
         Height = SystemParameters.PrimaryScreenHeight;
 
+        // Уведомление «активен» в левом верхнем углу экрана — в цветах темы приложения.
         hint = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(0xB0, 0x1E, 0x1E, 0x22)),
-            CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(10, 6, 10, 6),
+            Background = darkTheme
+                ? new SolidColorBrush(Color.FromArgb(0xB0, 0x1E, 0x1E, 0x22))
+                : new SolidColorBrush(Color.FromArgb(0xC8, 0xFF, 0xFF, 0xFF)),
+            BorderBrush = darkTheme ? null : new SolidColorBrush(Color.FromArgb(0x50, 0x00, 0x00, 0x00)),
+            BorderThickness = new Thickness(darkTheme ? 0 : 1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(12, 7, 12, 7),
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top,
             Margin = new Thickness(16),
             Child = new TextBlock
             {
                 Text = "Sound Radar — оверлей активен",
-                Foreground = Brushes.White,
+                Foreground = darkTheme
+                    ? Brushes.White
+                    : new SolidColorBrush(Color.FromRgb(0x1B, 0x1B, 0x1F)),
                 FontSize = 13,
             },
         };

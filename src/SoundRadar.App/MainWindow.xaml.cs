@@ -54,8 +54,6 @@ public partial class MainWindow : Window
     private readonly Rectangle?[] barR = new Rectangle[BandCount];
     private readonly TextBlock?[] barValue = new TextBlock[BandCount];
 
-    private readonly DispatcherTimer toastTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
-
     public MainWindow()
     {
         // Тема подключается до InitializeComponent: кисти нужны шаблонам при первой отрисовке.
@@ -65,11 +63,6 @@ public partial class MainWindow : Window
         uiTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
         uiTimer.Tick += OnUiTick;
         uiTimer.Start();
-        toastTimer.Tick += (_, _) =>
-        {
-            toastTimer.Stop();
-            overlayToast.Visibility = Visibility.Collapsed;
-        };
         hub.EventEnded += e => Dispatcher.BeginInvoke(() => AddEventToList(e));
         Loaded += async (_, _) => await OnLoadedAsync();
     }
@@ -500,23 +493,17 @@ public partial class MainWindow : Window
         else
             OpenOverlay(demo: overlayDemo);
         UpdateOverlayButtons();
-        ShowOverlayToast(overlay is not null ? "Оверлей включен" : "Оверлей выключен");
-    }
-
-    // Тематический тост: одинаково выглядит в тёмной и светлой теме, сам скрывается.
-    private void ShowOverlayToast(string text)
-    {
-        tbOverlayToast.Text = text;
-        overlayToast.Visibility = Visibility.Visible;
-        toastTimer.Stop();
-        toastTimer.Start();
+        // При включении плашку «активен» показывает сам оверлей (левый верхний угол
+        // экрана). При выключении окна оверлея уже нет — уведомление показывает тост.
+        if (overlay is null)
+            ScreenToast.Show("Sound Radar — оверлей выключен", ThemeManager.IsDark(Config.Theme));
     }
 
     private void OpenOverlay(bool demo)
     {
         if (overlay is not null)
             return;
-        overlay = new OverlayWindow(hub, demo)
+        overlay = new OverlayWindow(hub, demo, darkTheme: ThemeManager.IsDark(Config.Theme))
         {
             Zones = Config.OverlayZones,
             HiddenZones = Config.OverlayHiddenZones,

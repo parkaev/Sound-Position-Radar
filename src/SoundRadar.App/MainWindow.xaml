@@ -259,15 +259,6 @@
                         ToolTip="Скрывать это напоминание до выхода следующей версии" />
             </StackPanel>
         </Border>
-
-        <!-- Тост оверлея: тематическое уведомление о вкл/выкл, само скрывается -->
-        <Border x:Name="overlayToast" Grid.ColumnSpan="3"
-                HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0"
-                CornerRadius="9" Padding="14,8" Visibility="Collapsed"
-                Background="{DynamicResource Brush.PopupBg}" BorderBrush="{DynamicResource Brush.PopupBorder}"
-                BorderThickness="1" Effect="{StaticResource ShadowPopup}">
-            <TextBlock x:Name="tbOverlayToast" Foreground="{DynamicResource Brush.Text}" />
-        </Border>
         </Grid>
 
         <!-- Слой справки: панель поверх размытого основного окна, вместо отдельного окна -->
