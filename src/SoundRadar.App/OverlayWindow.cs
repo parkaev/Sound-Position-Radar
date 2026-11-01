@@ -150,6 +150,15 @@ public sealed class OverlayWindow : Window
     /// <summary>Оттенок для режима постоянного цвета (имя из RadarPalette.NamedColor).</summary>
     public string ColorName { get; set; } = "Красный";
 
+    /// <summary>Рисовать радарные метки (можно выключить, оставив в оверлее только прицел).</summary>
+    public bool RadarVisible { get; set; } = true;
+
+    /// <summary>Рисовать прицел в центре экрана — работает независимо от радара.</summary>
+    public bool CrosshairVisible { get; set; }
+
+    /// <summary>Параметры прицела (форма, размеры, цвет) — из настроек страницы «Прицел».</summary>
+    public CrosshairParams Crosshair { get; set; } = new();
+
     private Color EntryColor(Entry entry) => ColorMode switch
     {
         "Fixed" => RadarPalette.NamedColor(ColorName),
@@ -374,19 +383,26 @@ public sealed class OverlayWindow : Window
 
     private void Render()
     {
-        canvas.Children.Clear();
         var w = ActualWidth;
         var h = ActualHeight;
         if (w < 100 || h < 100)
             return;
 
-        if (string.Equals(Preset, EdgePreset, StringComparison.Ordinal))
-        {
-            RenderEdgeGlow(w, h);
-            return;
-        }
+        canvas.Children.Clear();
+        // Плашка «активен» относится к радару: в режиме «только прицел» она не нужна.
+        hint.Visibility = RadarVisible ? Visibility.Visible : Visibility.Collapsed;
 
-        RenderArcs(w, h);
+        // Прицел — в том же окне, рисуется независимо от радара и пресета.
+        if (CrosshairVisible)
+            CrosshairRenderer.Draw(canvas, w, h, Crosshair);
+
+        if (!RadarVisible)
+            return;
+
+        if (string.Equals(Preset, EdgePreset, StringComparison.Ordinal))
+            RenderEdgeGlow(w, h);
+        else
+            RenderArcs(w, h);
     }
 
     /// <summary>

@@ -92,6 +92,42 @@ public sealed class SoundRadarConfig
     /// <summary>Индекс монитора для оверлея (0 = основной). Список — System.Windows.Forms.Screen.AllScreens.</summary>
     public int OverlayMonitor { get; set; } = 0;
 
+    /// <summary>Показывать прицел в оверлее (независимо от радара).</summary>
+    public bool CrosshairEnabled { get; set; }
+
+    /// <summary>Форма прицела: "Cross" (крест), "Dot" (точка), "Circle" (круг) или "X" (диагонали).</summary>
+    public string CrosshairStyle { get; set; } = "Cross";
+
+    /// <summary>Длина линии прицела, px; для «Круга» — радиус.</summary>
+    public double CrosshairLength { get; set; } = 10.0;
+
+    /// <summary>Толщина линий прицела, px.</summary>
+    public double CrosshairThickness { get; set; } = 2.0;
+
+    /// <summary>Зазор между центром и началом линий, px.</summary>
+    public double CrosshairGap { get; set; } = 3.0;
+
+    /// <summary>Точка в центре — дополнение к кресту, кругу или X.</summary>
+    public bool CrosshairDot { get; set; }
+
+    /// <summary>Размер центральной точки, px (для стиля «Точка» — размер всего прицела).</summary>
+    public double CrosshairDotSize { get; set; } = 2.0;
+
+    /// <summary>Чёрная обводка линий — прицел виден и на светлом фоне.</summary>
+    public bool CrosshairOutline { get; set; } = true;
+
+    /// <summary>Толщина обводки, px (с каждой стороны).</summary>
+    public double CrosshairOutlineThickness { get; set; } = 1.0;
+
+    /// <summary>Цвет прицела в формате #RRGGBB.</summary>
+    public string CrosshairColor { get; set; } = "#00FF00";
+
+    /// <summary>Непрозрачность прицела, 0…1.</summary>
+    public double CrosshairOpacity { get; set; } = 1.0;
+
+    /// <summary>Глобальная горячая клавиша включения/отключения прицела. Пустая строка — не задана.</summary>
+    public string CrosshairHotkey { get; set; } = "";
+
     [JsonIgnore]
     public bool IsProcessSource => string.Equals(SourceType, "Process", StringComparison.OrdinalIgnoreCase);
 
@@ -117,6 +153,11 @@ public sealed class SoundRadarConfig
                 // Миграция: режимы цвета «по близости»/«по громкости» заменены на «по частотам».
                 if (cfg.OverlayColorMode is "Proximity" or "Salience")
                     cfg.OverlayColorMode = "Frequency";
+                // Нормализация прицела: неизвестная форма или битый цвет — к дефолту.
+                if (cfg.CrosshairStyle is not ("Cross" or "Dot" or "Circle" or "X"))
+                    cfg.CrosshairStyle = "Cross";
+                if (!IsValidHexColor(cfg.CrosshairColor))
+                    cfg.CrosshairColor = "#00FF00";
                 return cfg;
             }
         }
@@ -134,4 +175,7 @@ public sealed class SoundRadarConfig
             Directory.CreateDirectory(dir);
         File.WriteAllText(DefaultPath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
     }
+
+    private static bool IsValidHexColor(string? s) =>
+        !string.IsNullOrEmpty(s) && s.Length == 7 && s[0] == '#' && s.Skip(1).All(Uri.IsHexDigit);
 }

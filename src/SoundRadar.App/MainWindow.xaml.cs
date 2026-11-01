@@ -29,12 +29,15 @@ public partial class MainWindow : Window
     private WaveFileWriter? wavWriter;
     private OverlayWindow? overlay;
     private bool overlayDemo;
+    private bool radarWanted;      // включён ли радарный оверлей (пишется в Config.OverlayEnabled)
+    private bool crosshairWanted;  // включён ли прицел (пишется в Config.CrosshairEnabled)
     private bool running;
     private bool hotkeyCapturing;
     private string? latestVersion;
     private HwndSource? hwndSource;
 
-    private const int HotkeyId = 0x5244; // "RD"
+    private const int HotkeyId = 0x5244; // "RD" — радарный оверлей
+    private const int HotkeyIdCrosshair = 0x5245; // прицел
     private const int WmHotkey = 0x0312;
     private const int WmSettingChange = 0x001A;
     private const uint ModAlt = 0x1;
@@ -59,6 +62,8 @@ public partial class MainWindow : Window
         ThemeManager.Apply(this, Config.Theme);
         InitializeComponent();
         BuildMeters();
+        radarWanted = Config.OverlayEnabled;
+        crosshairWanted = Config.CrosshairEnabled;
         uiTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
         uiTimer.Tick += OnUiTick;
         uiTimer.Start();
@@ -145,15 +150,20 @@ public partial class MainWindow : Window
         hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
         hwndSource?.AddHook(WndProc);
         ThemeManager.SetTitleBarMode(this, ThemeManager.IsDark(Config.Theme));
-        TryRegisterHotkey(Config.OverlayHotkey);
+        TryRegisterHotkey(Config.OverlayHotkey, HotkeyId);
+        TryRegisterHotkey(Config.CrosshairHotkey, HotkeyIdCrosshair);
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WmHotkey && wParam.ToInt32() == HotkeyId)
+        if (msg == WmHotkey && wParam.ToInt32() is HotkeyId or HotkeyIdCrosshair)
         {
-            // Глобальный хоткей работает и когда фокус в игре.
-            ToggleOverlay();
+            // Глобальный хоткей работает и когда фокус в игре: радарный — включает/выключает
+            // радарный оверлей, второй — прицел (независимо друг от друга).
+            if (wParam.ToInt32() == HotkeyId)
+                ToggleOverlay();
+            else
+                ToggleCrosshair();
             handled = true;
         }
         else if (msg == WmSettingChange)
@@ -168,6 +178,7 @@ public partial class MainWindow : Window
                 UpdateStartButton();
                 UpdateOverlayButtons();
                 UpdateSourceModeUi();
+                DrawCrosshairPreview();
                 var dark = ThemeManager.IsDark(Config.Theme);
                 overlay?.SetHintTheme(dark);
                 ScreenToast.RefreshTheme(dark);
@@ -176,18 +187,18 @@ public partial class MainWindow : Window
         return IntPtr.Zero;
     }
 
-    /// <summary>Зарегистрировать хоткей. Возвращает null при успехе, иначе — причину.</summary>
-    private string? TryRegisterHotkey(string? binding)
+    /// <summary>Зарегистрировать хоткей в указанном слоте. Возвращает null при успехе, иначе — причину.</summary>
+    private string? TryRegisterHotkey(string? binding, int id)
     {
         if (hwndSource is null)
             return "окно ещё не готово";
-        UnregisterHotKey(hwndSource.Handle, HotkeyId);
+        UnregisterHotKey(hwndSource.Handle, id);
         if (string.IsNullOrWhiteSpace(binding))
             return null;
         if (!TryParseHotkey(binding, out var mods, out var vk))
             return "сочетание должно включать Ctrl, Alt, Shift или Win";
         // Может не зарегистрироваться, если сочетание занято другой программой.
-        return RegisterHotKey(hwndSource.Handle, HotkeyId, mods, vk)
+        return RegisterHotKey(hwndSource.Handle, id, mods, vk)
             ? null
             : "сочетание занято другой программой";
     }
@@ -296,7 +307,11 @@ public partial class MainWindow : Window
         foreach (var item in cbZones.Items.Cast<ComboBoxItem>())
             if (item.Content?.ToString() == Config.OverlayZones.ToString())
                 item.IsSelected = true;
-        if (Config.OverlayEnabled || overlayDemo)
+        PushCrosshairToControls();
+        tbCrossHotkey.Text = string.IsNullOrEmpty(Config.CrosshairHotkey) ? "наж. для установки" : Config.CrosshairHotkey;
+        radarWanted |= overlayDemo;
+        // Оверлей открывается, если нужен радар или прицел — они независимы.
+        if (radarWanted || crosshairWanted)
             OpenOverlay(demo: overlayDemo);
         UpdateOverlayButtons();
     }
@@ -505,30 +520,62 @@ public partial class MainWindow : Window
 
     private void OnOverlayToggle(object sender, RoutedEventArgs e) => ToggleOverlay();
 
+    private void ToggleOverlay()
+    {
+        if (overlay is { IsDemo: true })
+        {
+            CloseOverlay(); // предпросмотр закрывается хоткеем
+        }
+        else
+        {
+            radarWanted = !radarWanted;
+            EnsureOverlayState();
+        }
+        UpdateOverlayButtons();
+        // При включении плашку «активен» показывает сам оверлей (левый верхний угол
+        // экрана). При выключении окна оверлея уже нет — уведомление показывает тост
+        // на ТОМ ЖЕ мониторе, где был оверлей.
+        if (overlay is null && !radarWanted)
+            ScreenToast.Show("Sound Radar — оверлей выключен", ThemeManager.IsDark(Config.Theme), Config.OverlayMonitor);
+    }
+
+    private void ToggleCrosshair()
+    {
+        crosshairWanted = !crosshairWanted;
+        EnsureOverlayState();
+        UpdateOverlayButtons();
+        if (overlay is null && !crosshairWanted)
+            ScreenToast.Show("Sound Radar — прицел выключен", ThemeManager.IsDark(Config.Theme), Config.OverlayMonitor);
+    }
+
+    /// <summary>Окно оверлея живёт, пока нужен радар, прицел или предпросмотр; части
+    /// (радарные метки и прицел) включаются независимо друг от друга.</summary>
+    private void EnsureOverlayState()
+    {
+        if ((radarWanted || crosshairWanted) && overlay is null)
+            OpenOverlay(demo: overlayDemo);
+        else if (!radarWanted && !crosshairWanted && overlay is { IsDemo: false })
+            CloseOverlay();
+        if (overlay is not null)
+        {
+            overlay.RadarVisible = overlay.IsDemo || radarWanted;
+            overlay.CrosshairVisible = crosshairWanted;
+        }
+    }
+
     private void OnPreviewOverlay(object sender, RoutedEventArgs e)
     {
-        if (overlay is not null && overlay.IsDemo)
+        if (overlay is { IsDemo: true })
+        {
             CloseOverlay();
+            EnsureOverlayState(); // предпросмотр закончен — вернуть оверлей, если был включён
+        }
         else
         {
             CloseOverlay();
             OpenOverlay(demo: true);
         }
         UpdateOverlayButtons();
-    }
-
-    private void ToggleOverlay()
-    {
-        if (overlay is not null)
-            CloseOverlay();
-        else
-            OpenOverlay(demo: overlayDemo);
-        UpdateOverlayButtons();
-        // При включении плашку «активен» показывает сам оверлей (левый верхний угол
-        // экрана). При выключении окна оверлея уже нет — уведомление показывает тост
-        // на ТОМ ЖЕ мониторе, где был оверлей.
-        if (overlay is null)
-            ScreenToast.Show("Sound Radar — оверлей выключен", ThemeManager.IsDark(Config.Theme), Config.OverlayMonitor);
     }
 
     private void OpenOverlay(bool demo)
@@ -548,6 +595,9 @@ public partial class MainWindow : Window
             SizeDepth = Config.OverlaySizeDepth,
             HalfWidthDeg = Config.OverlayHalfWidth,
             FadeSec = Config.OverlayFadeSec,
+            RadarVisible = demo || radarWanted,
+            CrosshairVisible = crosshairWanted,
+            Crosshair = CrosshairParamsFromConfig(),
         };
         overlay.Show();
         UpdateOverlayButtons();
@@ -562,17 +612,21 @@ public partial class MainWindow : Window
 
     private void UpdateOverlayButtons()
     {
-        var active = overlay is not null;
-        btnOverlayToggle.Content = active ? "Оверлей: ВКЛ" : "Оверлей: ВЫКЛ";
+        var radarActive = overlay is not null && overlay.RadarVisible;
+        var crossActive = overlay is not null && overlay.CrosshairVisible;
         // Тематические кисти как у Старт/Стоп + всегда белый текст: в светлой теме
         // иначе на цветном фоне остаётся тёмный текст темы.
-        btnOverlayToggle.Background = active
+        btnOverlayToggle.Content = radarActive ? "Оверлей: ВКЛ" : "Оверлей: ВЫКЛ";
+        btnOverlayToggle.Background = radarActive
             ? ThemeBrush("Brush.StartBg", 0x2F, 0x6B, 0x4F)
             : ThemeBrush("Brush.StopBg", 0x7A, 0x3B, 0x3B);
         btnOverlayToggle.Foreground = Brushes.White;
-        btnPreview.Content = overlay is not null && overlay.IsDemo
-            ? "■  Стоп предпросмотр"
-            : "Предпросмотр оверлея";
+        btnCrosshairToggle.Content = crossActive ? "Прицел: ВКЛ" : "Прицел: ВЫКЛ";
+        btnCrosshairToggle.Background = crossActive
+            ? ThemeBrush("Brush.StartBg", 0x2F, 0x6B, 0x4F)
+            : ThemeBrush("Brush.StopBg", 0x7A, 0x3B, 0x3B);
+        btnCrosshairToggle.Foreground = Brushes.White;
+        btnPreview.Content = overlay is { IsDemo: true } ? "■  Стоп предпросмотр" : "Предпросмотр оверлея";
     }
 
     private void OnOverlayPresetChanged(object sender, SelectionChangedEventArgs e)
@@ -589,6 +643,10 @@ public partial class MainWindow : Window
     private void OnHotkeyKeyDown(object sender, KeyEventArgs e)
     {
         e.Handled = true;
+        // Общий обработчик для двух полей: хоткей радара (tbHotkey) и прицела (tbCrossHotkey).
+        var cross = ReferenceEquals(sender, tbCrossHotkey);
+        var box = cross ? tbCrossHotkey : tbHotkey;
+        var hint = cross ? tbCrossHotkeyHint : hintHotkey;
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt
             or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
@@ -596,11 +654,12 @@ public partial class MainWindow : Window
         if (key == Key.Escape)
         {
             // Отмена захвата: прежний хоткей остаётся активным.
-            tbHotkey.Text = string.IsNullOrEmpty(Config.OverlayHotkey) ? "наж. для установки" : Config.OverlayHotkey;
+            var current = cross ? Config.CrosshairHotkey : Config.OverlayHotkey;
+            box.Text = string.IsNullOrEmpty(current) ? "наж. для установки" : current;
             Keyboard.ClearFocus();
-            hintHotkey.Text = "Отменено. Прежний хоткей не изменён.";
-            hintHotkey.Foreground = (Brush)TryFindResource("Brush.Muted") ?? Brushes.Gray;
-            hintHotkey.Visibility = Visibility.Visible;
+            hint.Text = "Отменено. Прежний хоткей не изменён.";
+            hint.Foreground = (Brush)TryFindResource("Brush.Muted") ?? Brushes.Gray;
+            hint.Visibility = Visibility.Visible;
             return;
         }
         var parts = new List<string>();
@@ -609,45 +668,72 @@ public partial class MainWindow : Window
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) parts.Add("Shift");
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Windows)) parts.Add("Win");
         parts.Add(key.ToString());
-        SetHotkey(string.Join("+", parts));
+        SetHotkey(string.Join("+", parts), cross);
     }
 
-    private void OnHotkeyReset(object sender, RoutedEventArgs e) => SetHotkey("");
+    private void OnHotkeyReset(object sender, RoutedEventArgs e) => SetHotkey("", cross: false);
 
-    private void SetHotkey(string binding)
+    private void OnCrossHotkeyReset(object sender, RoutedEventArgs e) => SetHotkey("", cross: true);
+
+    private void SetHotkey(string binding, bool cross)
     {
-        var err = TryRegisterHotkey(binding);
-        if (err is null)
+        var box = cross ? tbCrossHotkey : tbHotkey;
+        var hint = cross ? tbCrossHotkeyHint : hintHotkey;
+        var other = cross ? Config.OverlayHotkey : Config.CrosshairHotkey;
+        string? err;
+        if (!string.IsNullOrEmpty(binding) && string.Equals(binding, other, StringComparison.OrdinalIgnoreCase))
         {
-            Config.OverlayHotkey = binding;
-            tbHotkey.Text = string.IsNullOrEmpty(binding) ? "наж. для установки" : binding;
-            hintHotkey.Text = string.IsNullOrEmpty(binding) ? "Хоткей сброшен." : "✔ Хоткей установлен.";
-            hintHotkey.Foreground = (Brush)TryFindResource("Brush.Text") ?? Brushes.Gray;
+            // Одно сочетание не должно висеть на двух действиях.
+            err = cross ? "сочетание уже занято хоткеем оверлея" : "сочетание уже занято хоткеем прицела";
         }
         else
         {
-            hintHotkey.Text = "✖ " + err;
-            hintHotkey.Foreground = (Brush)TryFindResource("Brush.RadarLabelHidden") ?? Brushes.IndianRed;
+            err = TryRegisterHotkey(binding, cross ? HotkeyIdCrosshair : HotkeyId);
+            if (err is null)
+            {
+                if (cross)
+                    Config.CrosshairHotkey = binding;
+                else
+                    Config.OverlayHotkey = binding;
+            }
         }
-        hintHotkey.Visibility = Visibility.Visible;
+        if (err is null)
+        {
+            box.Text = string.IsNullOrEmpty(binding) ? "наж. для установки" : binding;
+            hint.Text = string.IsNullOrEmpty(binding) ? "Хоткей сброшен." : "✔ Хоткей установлен.";
+            hint.Foreground = (Brush)TryFindResource("Brush.Text") ?? Brushes.Gray;
+        }
+        else
+        {
+            hint.Text = "✖ " + err;
+            hint.Foreground = (Brush)TryFindResource("Brush.RadarLabelHidden") ?? Brushes.IndianRed;
+        }
+        hint.Visibility = Visibility.Visible;
         SaveConfig();
     }
 
     private void OnHotkeyGotFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
         hotkeyCapturing = true;
-        tbHotkey.Text = "нажмите сочетание…";
-        hintHotkey.Text = "Нажмите сочетание с Ctrl, Alt, Shift или Win. Esc — отмена.";
-        hintHotkey.Foreground = (Brush)TryFindResource("Brush.Accent") ?? Brushes.Gray;
-        hintHotkey.Visibility = Visibility.Visible;
+        var cross = ReferenceEquals(sender, tbCrossHotkey);
+        var box = (TextBox)sender;
+        var hint = cross ? tbCrossHotkeyHint : hintHotkey;
+        box.Text = "нажмите сочетание…";
+        hint.Text = "Нажмите сочетание с Ctrl, Alt, Shift или Win. Esc — отмена.";
+        hint.Foreground = (Brush)TryFindResource("Brush.Accent") ?? Brushes.Gray;
+        hint.Visibility = Visibility.Visible;
     }
 
     private void OnHotkeyLostFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
         hotkeyCapturing = false;
-        hintHotkey.Visibility = Visibility.Collapsed;
-        if (tbHotkey.Text == "нажмите сочетание…")
-            tbHotkey.Text = string.IsNullOrEmpty(Config.OverlayHotkey) ? "наж. для установки" : Config.OverlayHotkey;
+        var cross = ReferenceEquals(sender, tbCrossHotkey);
+        var box = (TextBox)sender;
+        var hint = cross ? tbCrossHotkeyHint : hintHotkey;
+        hint.Visibility = Visibility.Collapsed;
+        var current = cross ? Config.CrosshairHotkey : Config.OverlayHotkey;
+        if (box.Text == "нажмите сочетание…")
+            box.Text = string.IsNullOrEmpty(current) ? "наж. для установки" : current;
     }
 
     private void OnColorModeChanged(object sender, SelectionChangedEventArgs e)
@@ -739,6 +825,208 @@ public partial class MainWindow : Window
         overlay.SizeDepth = Config.OverlaySizeDepth;
         overlay.HalfWidthDeg = Config.OverlayHalfWidth;
         overlay.FadeSec = Config.OverlayFadeSec;
+    }
+
+    // ---- прицел -----------------------------------------------------------------------------
+
+    private CrosshairParams CrosshairParamsFromConfig() => new()
+    {
+        Style = Config.CrosshairStyle,
+        Length = Config.CrosshairLength,
+        Thickness = Config.CrosshairThickness,
+        Gap = Config.CrosshairGap,
+        CenterDot = Config.CrosshairDot,
+        DotSize = Config.CrosshairDotSize,
+        Outline = Config.CrosshairOutline,
+        OutlineThickness = Config.CrosshairOutlineThickness,
+        Color = TryParseHexColor(Config.CrosshairColor, out var c) ? c : Color.FromRgb(0, 255, 0),
+        Opacity = Config.CrosshairOpacity,
+    };
+
+    private void ApplyCrosshairAppearance()
+    {
+        if (overlay is not null)
+            overlay.Crosshair = CrosshairParamsFromConfig();
+    }
+
+    private void OnCrosshairToggle(object sender, RoutedEventArgs e) => ToggleCrosshair();
+
+    private void OnNavChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || mainHost is null || pageCrosshair is null)
+            return;
+        var cross = navCrosshair.IsChecked == true;
+        mainHost.Visibility = cross ? Visibility.Collapsed : Visibility.Visible;
+        pageCrosshair.Visibility = cross ? Visibility.Visible : Visibility.Collapsed;
+        if (cross)
+            DrawCrosshairPreview();
+    }
+
+    private void OnCrossStyleChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || cbCrossStyle?.SelectedItem is not ComboBoxItem item)
+            return;
+        Config.CrosshairStyle = item.Tag?.ToString() ?? "Cross";
+        ApplyCrosshairAppearance();
+        DrawCrosshairPreview();
+        SaveConfig();
+    }
+
+    private void OnCrossCheckChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || cbCrossDot is null || cbCrossOutline is null)
+            return;
+        Config.CrosshairDot = cbCrossDot.IsChecked == true;
+        Config.CrosshairOutline = cbCrossOutline.IsChecked == true;
+        ApplyCrosshairAppearance();
+        DrawCrosshairPreview();
+        SaveConfig();
+    }
+
+    private void OnCrosshairSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded || slCrossLen is null || slCrossOpacity is null)
+            return;
+        SyncCrosshairFromControls();
+    }
+
+    private void OnCrosshairTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!IsLoaded || slCrossLen is null || slCrossOpacity is null)
+            return;
+        ApplyIntText(tbCrossLenValue, slCrossLen);
+        ApplyIntText(tbCrossThickValue, slCrossThick);
+        ApplyIntText(tbCrossGapValue, slCrossGap);
+        ApplyIntText(tbCrossDotSizeValue, slCrossDotSize);
+        ApplyIntText(tbCrossOutlineValue, slCrossOutline);
+        ApplyIntText(tbCrossOpacityValue, slCrossOpacity);
+        SyncCrosshairFromControls();
+    }
+
+    private void SyncCrosshairFromControls()
+    {
+        Config.CrosshairLength = slCrossLen.Value;
+        Config.CrosshairThickness = slCrossThick.Value;
+        Config.CrosshairGap = slCrossGap.Value;
+        Config.CrosshairDotSize = slCrossDotSize.Value;
+        Config.CrosshairOutlineThickness = slCrossOutline.Value;
+        Config.CrosshairOpacity = slCrossOpacity.Value / 100.0;
+        SetIntText(tbCrossLenValue, (int)slCrossLen.Value);
+        SetIntText(tbCrossThickValue, (int)slCrossThick.Value);
+        SetIntText(tbCrossGapValue, (int)slCrossGap.Value);
+        SetIntText(tbCrossDotSizeValue, (int)slCrossDotSize.Value);
+        SetIntText(tbCrossOutlineValue, (int)slCrossOutline.Value);
+        SetIntText(tbCrossOpacityValue, (int)slCrossOpacity.Value);
+        ApplyCrosshairAppearance();
+        DrawCrosshairPreview();
+        SaveConfig();
+    }
+
+    private void OnCrossColorChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded || tbCrossHex is null || slCrossR is null)
+            return;
+        var color = Color.FromRgb((byte)slCrossR.Value, (byte)slCrossG.Value, (byte)slCrossB.Value);
+        var hex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+        if (tbCrossHex.Text != hex)
+            tbCrossHex.Text = hex; // триггерит OnCrossHexChanged — там конфиг, свотч и предпросмотр
+    }
+
+    private void OnCrossHexChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!IsLoaded || tbCrossHex is null || slCrossR is null)
+            return;
+        if (!TryParseHexColor(tbCrossHex.Text, out var color))
+            return;
+        slCrossR.Value = color.R;
+        slCrossG.Value = color.G;
+        slCrossB.Value = color.B;
+        Config.CrosshairColor = tbCrossHex.Text.Trim().ToUpperInvariant();
+        crossSwatch.Background = new SolidColorBrush(color);
+        ApplyCrosshairAppearance();
+        DrawCrosshairPreview();
+        SaveConfig();
+    }
+
+    private void HexOnly(object sender, TextCompositionEventArgs e) =>
+        e.Handled = e.Text.Length > 0 && !e.Text.All(c => Uri.IsHexDigit(c) || c == '#');
+
+    private static bool TryParseHexColor(string? s, out Color color)
+    {
+        color = Color.FromRgb(0, 255, 0);
+        if (string.IsNullOrWhiteSpace(s) || s.Length != 7 || s[0] != '#')
+            return false;
+        try
+        {
+            color = (Color)ColorConverter.ConvertFromString(s);
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    private void OnCrossPreviewSizeChanged(object sender, SizeChangedEventArgs e) => DrawCrosshairPreview();
+
+    private void DrawCrosshairPreview()
+    {
+        if (crossPreview is null)
+            return;
+        crossPreview.Children.Clear();
+        var w = crossPreview.ActualWidth;
+        var h = crossPreview.ActualHeight;
+        if (w < 20 || h < 20)
+            return;
+        CrosshairRenderer.Draw(crossPreview, w, h, CrosshairParamsFromConfig());
+    }
+
+    private void PushCrosshairToControls()
+    {
+        if (!IsLoaded || slCrossLen is null || tbCrossHex is null)
+            return;
+        slCrossLen.Value = Config.CrosshairLength;
+        slCrossThick.Value = Config.CrosshairThickness;
+        slCrossGap.Value = Config.CrosshairGap;
+        slCrossDotSize.Value = Config.CrosshairDotSize;
+        slCrossOutline.Value = Config.CrosshairOutlineThickness;
+        slCrossOpacity.Value = Config.CrosshairOpacity * 100.0;
+        SetIntText(tbCrossLenValue, (int)slCrossLen.Value);
+        SetIntText(tbCrossThickValue, (int)slCrossThick.Value);
+        SetIntText(tbCrossGapValue, (int)slCrossGap.Value);
+        SetIntText(tbCrossDotSizeValue, (int)slCrossDotSize.Value);
+        SetIntText(tbCrossOutlineValue, (int)slCrossOutline.Value);
+        SetIntText(tbCrossOpacityValue, (int)slCrossOpacity.Value);
+        cbCrossDot.IsChecked = Config.CrosshairDot;
+        cbCrossOutline.IsChecked = Config.CrosshairOutline;
+        cbCrossStyle.SelectedItem = cbCrossStyle.Items.Cast<ComboBoxItem>()
+            .FirstOrDefault(i => string.Equals(i.Tag?.ToString(), Config.CrosshairStyle, StringComparison.Ordinal));
+        var color = TryParseHexColor(Config.CrosshairColor, out var c) ? c : Color.FromRgb(0, 255, 0);
+        slCrossR.Value = color.R;
+        slCrossG.Value = color.G;
+        slCrossB.Value = color.B;
+        var hex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+        if (tbCrossHex.Text != hex)
+            tbCrossHex.Text = hex;
+        crossSwatch.Background = new SolidColorBrush(color);
+        DrawCrosshairPreview();
+    }
+
+    private void OnResetCrosshair(object sender, RoutedEventArgs e)
+    {
+        Config.CrosshairStyle = "Cross";
+        Config.CrosshairLength = 10;
+        Config.CrosshairThickness = 2;
+        Config.CrosshairGap = 3;
+        Config.CrosshairDot = false;
+        Config.CrosshairDotSize = 2;
+        Config.CrosshairOutline = true;
+        Config.CrosshairOutlineThickness = 1;
+        Config.CrosshairColor = "#00FF00";
+        Config.CrosshairOpacity = 1.0;
+        PushCrosshairToControls();
+        ApplyCrosshairAppearance();
+        SaveConfig();
     }
 
     private void RebuildHiddenZonesPanel()
@@ -840,6 +1128,7 @@ public partial class MainWindow : Window
         UpdateStartButton();
         UpdateOverlayButtons();
         UpdateSourceModeUi();
+        DrawCrosshairPreview();
         var dark = ThemeManager.IsDark(Config.Theme);
         overlay?.SetHintTheme(dark);
         ScreenToast.RefreshTheme(dark);
@@ -1339,7 +1628,12 @@ public partial class MainWindow : Window
         Config.MinSalienceDb = slMinSalience.Value;
         Config.IncludeProcessTree = cbIncludeTree.IsChecked == true;
         Config.PreferMultichannel = cb360.IsChecked == true;
-        Config.OverlayEnabled = overlay is not null && !overlay.IsDemo;
+        // Флаги включения берутся из текущих желаний; в демо-предпросмотре не трогаем.
+        if (overlay is not { IsDemo: true })
+        {
+            Config.OverlayEnabled = radarWanted;
+            Config.CrosshairEnabled = crosshairWanted;
+        }
         Config.OverlayHideCenter = false; // мигрировано в OverlayHiddenZones
         Config.OverlayOpacity = slOpacity.Value / 100.0;
         Config.OverlaySizeDepth = slSize.Value;
@@ -1355,6 +1649,7 @@ public partial class MainWindow : Window
         if (hwndSource is not null)
         {
             UnregisterHotKey(hwndSource.Handle, HotkeyId);
+            UnregisterHotKey(hwndSource.Handle, HotkeyIdCrosshair);
             hwndSource.RemoveHook(WndProc);
         }
         overlay?.Close();

@@ -8,7 +8,27 @@
         Closing="OnWindowClosing" PreviewKeyDown="OnWindowPreviewKeyDown">
     <!-- Стили контролов — общие, лежат в App.Resources (App.xaml). -->
     <Grid>
-        <Grid x:Name="mainHost">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Навигация по страницам: «Радар» (детектор + оверлей радара) и «Прицел». -->
+        <Border Grid.Row="0" HorizontalAlignment="Left" Margin="10,10,10,0"
+                Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.CardBorder}"
+                BorderThickness="1" CornerRadius="10" Padding="5,4">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="navRadar" Content="Радар" GroupName="navPage" IsChecked="True"
+                             Style="{StaticResource NavRadioButton}" Checked="OnNavChanged"
+                             ToolTip="Детектор звука и настройки оверлея радара" />
+                <RadioButton x:Name="navCrosshair" Content="Прицел" GroupName="navPage" Margin="4,0,0,0"
+                             Style="{StaticResource NavRadioButton}" Checked="OnNavChanged"
+                             ToolTip="Настройка прицела поверх игры (рисуется в том же оверлее)" />
+            </StackPanel>
+        </Border>
+
+        <!-- Страница «Радар»: прежние 3 колонки. -->
+        <Grid x:Name="mainHost" Grid.Row="1">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="430" MinWidth="380" />
             <ColumnDefinition Width="*" MinWidth="300" />
@@ -270,8 +290,162 @@
         </Border>
         </Grid>
 
+        <!-- Страница «Прицел»: слева настройки, справа предпросмотр 1:1 и тумблер.
+             Рисуется в том же оверлее, что и радар, но работает независимо от него. -->
+        <Grid x:Name="pageCrosshair" Grid.Row="1" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="430" MinWidth="380" />
+                <ColumnDefinition Width="*" MinWidth="300" />
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0" Margin="10,10,6,10">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="2,0,8,4">
+                        <GroupBox Header="Стиль прицела">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Форма:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <ComboBox x:Name="cbCrossStyle" Width="150" SelectionChanged="OnCrossStyleChanged">
+                                        <ComboBoxItem Tag="Cross" Content="Крест" />
+                                        <ComboBoxItem Tag="Dot" Content="Точка" />
+                                        <ComboBoxItem Tag="Circle" Content="Круг" />
+                                        <ComboBoxItem Tag="X" Content="X (диагональ)" />
+                                    </ComboBox>
+                                </StackPanel>
+                                <CheckBox x:Name="cbCrossDot" Content="Точка в центре" Margin="0,8,0,0"
+                                          Checked="OnCrossCheckChanged" Unchecked="OnCrossCheckChanged"
+                                          ToolTip="Маленькая точка в центре — дополнение к кресту, кругу или X" />
+                                <CheckBox x:Name="cbCrossOutline" Content="Чёрная обводка" IsChecked="True" Margin="0,4,0,0"
+                                          Checked="OnCrossCheckChanged" Unchecked="OnCrossCheckChanged"
+                                          ToolTip="Чёрная подложка вокруг линий: прицел виден и на светлом фоне" />
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Размеры, px" Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Тонкая настройка (шаг 1, можно вписать вручную)" Foreground="{DynamicResource Brush.Muted}" Margin="0,0,0,2" />
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="Длина / радиус:" Width="112" VerticalAlignment="Center" FontSize="12"
+                                               ToolTip="Длина линии прицела; для формы «Круг» — радиус круга" />
+                                    <Slider x:Name="slCrossLen" Minimum="2" Maximum="60" Value="10" Width="120"
+                                            IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnCrosshairSliderChanged" />
+                                    <TextBox x:Name="tbCrossLenValue" Width="52" Margin="6,0,0,0" TextChanged="OnCrosshairTextChanged"
+                                             PreviewTextInput="NumericOnly" MaxLength="3" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="Толщина:" Width="112" VerticalAlignment="Center" FontSize="12"
+                                               ToolTip="Толщина линий прицела" />
+                                    <Slider x:Name="slCrossThick" Minimum="1" Maximum="10" Value="2" Width="120"
+                                            IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnCrosshairSliderChanged" />
+                                    <TextBox x:Name="tbCrossThickValue" Width="52" Margin="6,0,0,0" TextChanged="OnCrosshairTextChanged"
+                                             PreviewTextInput="NumericOnly" MaxLength="2" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="Зазор:" Width="112" VerticalAlignment="Center" FontSize="12"
+                                               ToolTip="Расстояние от центра до начала линий" />
+                                    <Slider x:Name="slCrossGap" Minimum="0" Maximum="40" Value="3" Width="120"
+                                            IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnCrosshairSliderChanged" />
+                                    <TextBox x:Name="tbCrossGapValue" Width="52" Margin="6,0,0,0" TextChanged="OnCrosshairTextChanged"
+                                             PreviewTextInput="NumericOnly" MaxLength="2" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="Точка, px:" Width="112" VerticalAlignment="Center" FontSize="12"
+                                               ToolTip="Размер центральной точки; для формы «Точка» — размер всего прицела" />
+                                    <Slider x:Name="slCrossDotSize" Minimum="1" Maximum="20" Value="2" Width="120"
+                                            IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnCrosshairSliderChanged" />
+                                    <TextBox x:Name="tbCrossDotSizeValue" Width="52" Margin="6,0,0,0" TextChanged="OnCrosshairTextChanged"
+                                             PreviewTextInput="NumericOnly" MaxLength="2" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="Обводка, px:" Width="112" VerticalAlignment="Center" FontSize="12"
+                                               ToolTip="Толщина чёрной обводки с каждой стороны линии" />
+                                    <Slider x:Name="slCrossOutline" Minimum="1" Maximum="4" Value="1" Width="120"
+                                            IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnCrosshairSliderChanged" />
+                                    <TextBox x:Name="tbCrossOutlineValue" Width="52" Margin="6,0,0,0" TextChanged="OnCrosshairTextChanged"
+                                             PreviewTextInput="NumericOnly" MaxLength="1" />
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Цвет" Margin="0,12,0,0">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Цвет:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <Border x:Name="crossSwatch" Width="26" Height="22" CornerRadius="4" Background="#00FF00"
+                                            BorderBrush="{DynamicResource Brush.CardBorder}" BorderThickness="1" />
+                                    <TextBox x:Name="tbCrossHex" Width="86" Margin="8,0,0,0" MaxLength="7" Text="#00FF00"
+                                             TextChanged="OnCrossHexChanged" PreviewTextInput="HexOnly"
+                                             ToolTip="Цвет в формате #RRGGBB" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <TextBlock Text="Красный (R):" Width="112" VerticalAlignment="Center" FontSize="12" />
+                                    <Slider x:Name="slCrossR" Minimum="0" Maximum="255" Value="0" Width="120"
+                                            IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnCrossColorChanged" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="Зелёный (G):" Width="112" VerticalAlignment="Center" FontSize="12" />
+                                    <Slider x:Name="slCrossG" Minimum="0" Maximum="255" Value="255" Width="120"
+                                            IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnCrossColorChanged" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="Синий (B):" Width="112" VerticalAlignment="Center" FontSize="12" />
+                                    <Slider x:Name="slCrossB" Minimum="0" Maximum="255" Value="0" Width="120"
+                                            IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnCrossColorChanged" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <TextBlock Text="Непрозрачность, %:" Width="112" VerticalAlignment="Center" FontSize="12"
+                                               ToolTip="Общая непрозрачность прицела" />
+                                    <Slider x:Name="slCrossOpacity" Minimum="20" Maximum="100" Value="100" Width="120"
+                                            IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnCrosshairSliderChanged" />
+                                    <TextBox x:Name="tbCrossOpacityValue" Width="52" Margin="6,0,0,0" TextChanged="OnCrosshairTextChanged"
+                                             PreviewTextInput="NumericOnly" MaxLength="3" />
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Горячая клавиша" Margin="0,12,0,0">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Вкл/выкл прицел:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBox x:Name="tbCrossHotkey" Width="135" IsReadOnly="True" PreviewKeyDown="OnHotkeyKeyDown"
+                                             GotKeyboardFocus="OnHotkeyGotFocus" LostKeyboardFocus="OnHotkeyLostFocus"
+                                             Text="наж. для установки" Cursor="Hand"
+                                             ToolTip="Кликните и нажмите сочетание (работает глобально, поверх игры)" />
+                                    <Button x:Name="btnCrossHotkeyReset" Content="Сброс" Margin="6,0,0,0" Click="OnCrossHotkeyReset"
+                                            ToolTip="Сбросить хоткей прицела" />
+                                </StackPanel>
+                                <TextBlock x:Name="tbCrossHotkeyHint" Visibility="Collapsed" TextWrapping="Wrap" FontSize="11"
+                                           Foreground="{DynamicResource Brush.Muted}" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </GroupBox>
+
+                        <Button x:Name="btnResetCrosshair" Content="Сбросить настройки прицела" Margin="0,12,0,0" Click="OnResetCrosshair"
+                                ToolTip="Крест 10 px, толщина 2, зазор 3, зелёный, обводка включена (хоткей не сбрасывается)" />
+                        <TextBlock Text="Прицел рисуется в том же оверлее, что и радар, но работает независимо: радар можно выключить, оставив только прицел. Виден в оконном режиме и «окно без рамки»; в полноэкранном исключительном — нет."
+                                   TextWrapping="Wrap" Foreground="{DynamicResource Brush.Muted}" FontSize="11" Margin="0,6,0,0" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <Grid Grid.Column="1" Margin="6,10,10,10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <GroupBox Grid.Row="0" Header="Предпросмотр (реальный размер, 1:1)">
+                    <Border Background="{DynamicResource Brush.RadarBg}" CornerRadius="8"
+                            BorderBrush="{DynamicResource Brush.CardBorder}" BorderThickness="1">
+                        <Canvas x:Name="crossPreview" Background="Transparent" SizeChanged="OnCrossPreviewSizeChanged" />
+                    </Border>
+                </GroupBox>
+                <Button x:Name="btnCrosshairToggle" Grid.Row="1" Height="44" Margin="0,10,0,0" Click="OnCrosshairToggle"
+                        Content="Прицел: ВЫКЛ" Foreground="White" FontSize="14" FontWeight="SemiBold"
+                        ToolTip="Включить/выключить прицел поверх игр (можно назначить глобальный хоткей)" />
+            </Grid>
+        </Grid>
+
         <!-- Слой справки: панель поверх размытого основного окна, вместо отдельного окна -->
-        <Grid x:Name="helpOverlay" Visibility="Collapsed" Background="{DynamicResource Brush.Scrim}">
+        <Grid x:Name="helpOverlay" Grid.Row="0" Grid.RowSpan="2" Visibility="Collapsed" Background="{DynamicResource Brush.Scrim}">
             <Border Margin="60,36" Background="{DynamicResource Brush.Window}"
                     BorderBrush="{DynamicResource Brush.CardBorder}" BorderThickness="1" CornerRadius="14"
                     Effect="{StaticResource ShadowPopup}">

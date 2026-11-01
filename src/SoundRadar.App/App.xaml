@@ -198,6 +198,36 @@
             </Setter>
         </Style>
 
+        <!-- Вкладка навигации: пилюля с заливкой при выборе (страницы «Радар» / «Прицел») -->
+        <Style x:Key="NavRadioButton" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Muted}" />
+            <Setter Property="Padding" Value="14,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" Background="Transparent"
+                                BorderBrush="Transparent" BorderThickness="1"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Brush.ItemHover}" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Brush.CardBorder}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- GroupBox: приглушённый заголовок над карточкой. Grid (не StackPanel): строка *
              отдаёт содержимому ограниченную высоту, иначе радар-канвас не отрисовывается.
              Header="{x:Null}" — заголовок скрывается. -->
