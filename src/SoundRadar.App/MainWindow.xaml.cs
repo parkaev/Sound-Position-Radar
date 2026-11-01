@@ -543,9 +543,12 @@ public partial class MainWindow : Window
     {
         var active = overlay is not null;
         btnOverlayToggle.Content = active ? "Оверлей: ВКЛ" : "Оверлей: ВЫКЛ";
-        btnOverlayToggle.Background = new SolidColorBrush(active
-            ? Color.FromRgb(0x2F, 0x6B, 0x4F)
-            : Color.FromRgb(0x6B, 0x2F, 0x2F));
+        // Тематические кисти как у Старт/Стоп + всегда белый текст: в светлой теме
+        // иначе на цветном фоне остаётся тёмный текст темы.
+        btnOverlayToggle.Background = active
+            ? ThemeBrush("Brush.StartBg", 0x2F, 0x6B, 0x4F)
+            : ThemeBrush("Brush.StopBg", 0x7A, 0x3B, 0x3B);
+        btnOverlayToggle.Foreground = Brushes.White;
         btnPreview.Content = overlay is not null && overlay.IsDemo
             ? "■  Стоп предпросмотр"
             : "Предпросмотр оверлея";

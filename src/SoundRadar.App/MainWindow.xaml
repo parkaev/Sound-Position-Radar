@@ -231,7 +231,7 @@
                     <Button x:Name="btnStart" Height="44" Click="OnStartStop"
                             Background="{DynamicResource Brush.StartBg}" Foreground="White" Content="▶  Старт" FontSize="15" FontWeight="Bold" />
                     <Button x:Name="btnOverlayToggle" Height="40" Margin="0,8,0,0" Click="OnOverlayToggle"
-                            Content="Оверлей: ВЫКЛ" FontSize="14" FontWeight="SemiBold"
+                            Content="Оверлей: ВЫКЛ" Foreground="White" FontSize="14" FontWeight="SemiBold"
                             ToolTip="Включить/выключить оверлей поверх игр (также глобальный хоткей)" />
                     <TextBlock x:Name="tbStatus" TextWrapping="Wrap" Margin="2,10,0,0"
                                Foreground="{DynamicResource Brush.Muted}" FontSize="11" MinHeight="40" />
