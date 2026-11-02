@@ -1,3 +1,5 @@
+**Русский** | [English](README.en.md)
+
 # Sound Position Radar
 
 Визуальный индикатор направления звука для игр: показывает на экране, **с какой стороны**
@@ -72,6 +74,10 @@ dotnet build SoundRadar.slnx
 dotnet test  tests/SoundRadar.Core.Tests/SoundRadar.Core.Tests.csproj
 dotnet publish src/SoundRadar.App/SoundRadar.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
 ```
+
+## Лицензия
+
+[MIT](LICENSE) © parkaev
 
 ## Технологии
 
